@@ -29,19 +29,25 @@ export interface NuxtPlugin {
 
 type TemplateDefaultOptions = Record<string, any>
 
+// NuxtTemplate
 export interface NuxtTemplate<Options = TemplateDefaultOptions> {
   /** resolved output file path (generated) */
+  // 目标文件的路径。如果未提供 dst，它将从 filename 路径和 nuxt buildDir 选项生成。
   dst?: string
   /** The target filename once the template is copied into the Nuxt buildDir */
+  // 模板的文件名。如果未提供 filename，它将从 src 路径生成。在这种情况下，src 选项是必需的。
   filename?: string
   /** An options object that will be accessible within the template via `<% options %>` */
+  // 传递给模板的选项。
   options?: Options
   /** The resolved path to the source file to be template */
+  // 模板的路径。如果未提供 src，则必须提供 getContents
   src?: string
   /** Provided compile option instead of src */
-
+  // 一个将使用 options 对象调用的函数。它应该返回一个字符串或一个解析为字符串的 Promise。如果提供了 src，则将忽略此函数。
   getContents?: (data: { nuxt: Nuxt, app: NuxtApp, options: Options }) => string | Promise<string>
   /** Write to filesystem */
+  // 如果设置为 true，模板将被写入目标文件。否则，模板将仅在虚拟文件系统中使用。
   write?: boolean
   /**
    * The source path of the template (to try resolving dependencies from).

@@ -94,6 +94,7 @@ export function addTypeTemplate<T> (_template: NuxtTypeTemplate<T>, context?: { 
 
 /**
  * Normalize a nuxt template object
+ * NormalizeTemplate 是 Nuxt 模板系统中用于标准化模板配置的核心工具函数，主要作用是对传入的模板配置进行规范化处理
  */
 export function normalizeTemplate<T> (template: NuxtTemplate<T> | string, buildDir?: string): ResolvedNuxtTemplate<T> {
   if (!template) {
@@ -101,6 +102,7 @@ export function normalizeTemplate<T> (template: NuxtTemplate<T> | string, buildD
   }
 
   // Normalize
+  // 将字符串或部分配置转换为标准模板对象格式
   if (typeof template === 'string') {
     template = { src: template }
   } else {
@@ -112,6 +114,8 @@ export function normalizeTemplate<T> (template: NuxtTemplate<T> | string, buildD
     if (!existsSync(template.src)) {
       throw new Error('Template not found: ' + template.src)
     }
+
+    // 自动生成 filename
     if (!template.filename) {
       const srcPath = parse(template.src)
       template.filename = (template as any).fileName || `${basename(srcPath.dir)}.${srcPath.name}.${hash(template.src)}${srcPath.ext}`
@@ -127,11 +131,13 @@ export function normalizeTemplate<T> (template: NuxtTemplate<T> | string, buildD
   }
 
   // Always write declaration files
+  // 自动标记需要写入磁盘
   if (template.filename.endsWith('.d.ts')) {
     template.write = true
   }
 
   // Resolve dst
+  // 解析 dst
   template.dst ||= resolve(buildDir ?? useNuxt().options.buildDir, template.filename)
 
   return template as ResolvedNuxtTemplate<T>

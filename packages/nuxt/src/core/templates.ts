@@ -13,6 +13,7 @@ import type { Nitro } from 'nitropack'
 import { annotatePlugins, checkForCircularDependencies } from './app'
 import { EXTENSION_RE } from './utils'
 
+// vueShim
 export const vueShim: NuxtTemplate = {
   filename: 'types/vue-shim.d.ts',
   getContents: ({ nuxt }) => {
@@ -31,11 +32,13 @@ export const vueShim: NuxtTemplate = {
 }
 
 // TODO: Use an alias
+// appComponentTemplate
 export const appComponentTemplate: NuxtTemplate = {
   filename: 'app-component.mjs',
   getContents: ctx => genExport(ctx.app.mainComponent!, ['default']),
 }
 // TODO: Use an alias
+// rootComponentTemplate
 export const rootComponentTemplate: NuxtTemplate = {
   filename: 'root-component.mjs',
   // TODO: fix upstream in vite - this ensures that vite generates a module graph for islands
@@ -43,22 +46,26 @@ export const rootComponentTemplate: NuxtTemplate = {
   getContents: ctx => (ctx.nuxt.options.dev ? 'import \'#build/components.islands.mjs\';\n' : '') + genExport(ctx.app.rootComponent!, ['default']),
 }
 // TODO: Use an alias
+// errorComponentTemplate
 export const errorComponentTemplate: NuxtTemplate = {
   filename: 'error-component.mjs',
   getContents: ctx => genExport(ctx.app.errorComponent!, ['default']),
 }
 // TODO: Use an alias
+// testComponentWrapperTemplate
 export const testComponentWrapperTemplate: NuxtTemplate = {
   filename: 'test-component-wrapper.mjs',
   getContents: ctx => genExport(resolve(ctx.nuxt.options.appDir, 'components/test-component-wrapper'), ['default']),
 }
 
+// cssTemplate
 export const cssTemplate: NuxtTemplate = {
   filename: 'css.mjs',
   getContents: ctx => ctx.nuxt.options.css.map(i => genImport(i)).join('\n'),
 }
 
 const PLUGIN_TEMPLATE_RE = /_(45|46|47)/g
+// clientPluginTemplate
 export const clientPluginTemplate: NuxtTemplate = {
   filename: 'plugins.client.mjs',
   async getContents (ctx) {
@@ -79,6 +86,7 @@ export const clientPluginTemplate: NuxtTemplate = {
   },
 }
 
+// serverPluginTemplate
 export const serverPluginTemplate: NuxtTemplate = {
   filename: 'plugins.server.mjs',
   async getContents (ctx) {
@@ -99,6 +107,7 @@ export const serverPluginTemplate: NuxtTemplate = {
   },
 }
 
+// appDefaults
 export const appDefaults: NuxtTypeTemplate = {
   filename: 'types/app-defaults.d.ts',
   getContents: (ctx) => {
@@ -117,6 +126,7 @@ const TS_RE = /\.[cm]?tsx?$/
 const JS_LETTER_RE = /\.(?<letter>[cm])?jsx?$/
 const JS_RE = /\.[cm]jsx?$/
 const JS_CAPTURE_RE = /\.[cm](jsx?)$/
+// pluginsDeclaration
 export const pluginsDeclaration: NuxtTemplate = {
   filename: 'types/plugins.d.ts',
   getContents: async ({ nuxt, app }) => {
@@ -193,6 +203,7 @@ export { }
 
 const IMPORT_NAME_RE = /\.\w+$/
 const GIT_RE = /^git\+/
+// schemaTemplate
 export const schemaTemplate: NuxtTemplate = {
   filename: 'types/schema.d.ts',
   getContents: async ({ nuxt }) => {
@@ -303,6 +314,7 @@ export const schemaTemplate: NuxtTemplate = {
 }
 
 // Add layouts template
+// layoutTemplate
 export const layoutTemplate: NuxtTemplate = {
   filename: 'layouts.mjs',
   getContents ({ app }) {
@@ -316,7 +328,7 @@ export const layoutTemplate: NuxtTemplate = {
   },
 }
 
-// Add middleware template
+// middlewareTemplate
 export const middlewareTemplate: NuxtTemplate = {
   filename: 'middleware.mjs',
   getContents ({ app }) {
@@ -343,6 +355,7 @@ function renderAttrs (obj: Record<string, string>) {
   return attrs.join(' ')
 }
 
+// nitroSchemaTemplate
 export const nitroSchemaTemplate: NuxtTemplate = {
   filename: 'types/nitro-nuxt.d.ts',
   async getContents ({ nuxt }) {
@@ -399,6 +412,7 @@ declare module 'nitropack' {
   },
 }
 
+// clientConfigTemplate
 export const clientConfigTemplate: NuxtTemplate = {
   filename: 'nitro.client.mjs',
   getContents: ({ nuxt }) => {
@@ -413,6 +427,7 @@ export const clientConfigTemplate: NuxtTemplate = {
   },
 }
 
+// appConfigDeclarationTemplate
 export const appConfigDeclarationTemplate: NuxtTemplate = {
   filename: 'types/app.config.d.ts',
   getContents ({ app, nuxt }) {
@@ -452,6 +467,7 @@ declare module '@nuxt/schema' {
   },
 }
 
+// appConfigTemplate
 export const appConfigTemplate: NuxtTemplate = {
   filename: 'app.config.mjs',
   write: true,
@@ -476,6 +492,7 @@ export default /*@__PURE__*/ defuFn(${app.configs.map((_id: string, index: numbe
   },
 }
 
+// publicPathTemplate
 export const publicPathTemplate: NuxtTemplate = {
   filename: 'paths.mjs',
   getContents ({ nuxt }) {
@@ -506,6 +523,7 @@ export const publicPathTemplate: NuxtTemplate = {
   },
 }
 
+// dollarFetchTemplate
 export const dollarFetchTemplate: NuxtTemplate = {
   filename: 'fetch.mjs',
   getContents () {
@@ -522,6 +540,7 @@ export const dollarFetchTemplate: NuxtTemplate = {
 }
 
 // Allow direct access to specific exposed nuxt.config
+// nuxtConfigTemplate
 export const nuxtConfigTemplate: NuxtTemplate = {
   filename: 'nuxt.config.mjs',
   getContents: (ctx) => {
@@ -569,6 +588,8 @@ export const nuxtConfigTemplate: NuxtTemplate = {
 
 const TYPE_FILENAME_RE = /\.([cm])?[jt]s$/
 const DECLARATION_RE = /\.d\.[cm]?ts$/
+
+// buildTypeTemplate
 export const buildTypeTemplate: NuxtTemplate = {
   filename: 'types/build.d.ts',
   getContents ({ app }) {

@@ -32,21 +32,26 @@ export async function generateApp (nuxt: Nuxt, app: NuxtApp, options: { filter?:
   await resolveApp(nuxt, app)
 
   // User templates from options.build.templates
+  // 提取 templates
   app.templates = Object.values(defaultTemplates).concat(nuxt.options.build.templates) as NuxtTemplate[]
 
   // Extend templates with hook
+  // 执行hook, 【app:templates】
   await nuxt.callHook('app:templates', app)
 
-  // Normalize templates
+  // Normalize 模板
+  // 对 模板 规范化处理
   app.templates = app.templates.map(tmpl => normalizeTemplate(tmpl, nuxt.options.buildDir))
 
   // compile plugins first as they are needed within the nuxt.vfs
   // in order to annotate templated plugins
+  // 记录被过滤的 模板
   const filteredTemplates: Record<'pre' | 'post', Array<ResolvedNuxtTemplate<any>>> = {
     pre: [],
     post: [],
   }
 
+  // 过滤 模板
   for (const template of app.templates as Array<ResolvedNuxtTemplate<any>>) {
     if (options.filter && !options.filter(template)) { continue }
     const key = template.filename && postTemplates.includes(template.filename) ? 'post' : 'pre'
@@ -62,6 +67,7 @@ export async function generateApp (nuxt: Nuxt, app: NuxtApp, options: { filter?:
   const dirs = new Set<string>()
   const changedTemplates: Array<ResolvedNuxtTemplate<any>> = []
   const FORWARD_SLASH_RE = /\//g
+  // 处理模板
   async function processTemplate (template: ResolvedNuxtTemplate) {
     const fullPath = template.dst || resolve(nuxt.options.buildDir, template.filename!)
     const start = performance.now()
@@ -96,6 +102,7 @@ export async function generateApp (nuxt: Nuxt, app: NuxtApp, options: { filter?:
 
     if (template.modified && template.write) {
       dirs.add(dirname(fullPath))
+      // writes
       writes.push(() => writeFileSync(fullPath, contents, 'utf8'))
     }
   }
@@ -108,6 +115,8 @@ export async function generateApp (nuxt: Nuxt, app: NuxtApp, options: { filter?:
   for (const dir of dirs) {
     mkdirSync(dir, { recursive: true })
   }
+
+  // 处理 writes
   for (const write of writes) {
     write()
   }
