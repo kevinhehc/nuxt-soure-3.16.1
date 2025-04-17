@@ -86,6 +86,20 @@ export interface NuxtOptions extends Omit<ConfigSchema, 'vue' | 'sourcemap' | 'd
     $client: ConfigSchema['webpack']
     $server: ConfigSchema['webpack']
   }
+  // Nuxt 3 引入了 “Layer” 的概念，也叫模块化应用层，允许你通过 extends 或 themes 使用多个 Nuxt 项目叠加在一起运行。
+
+  // nuxt.config.ts
+  // export default defineNuxtConfig({
+  //                                   extends: ['@my-company/theme', './custom-layer']
+  //                                 })
+
+  // 这时 nuxt.options._layers 可能会包含：
+
+  // 1.当前项目路径（你自己的项目）
+  // 2.【@my-company/theme 的路径】
+  // 3.【./custom-layer 的路径】
+  //
+  // 每个都作为一个 Layer 加入，形成一个合并的配置体系。
   _layers: NuxtConfigLayer[]
   $schema: SchemaDefinition
 }

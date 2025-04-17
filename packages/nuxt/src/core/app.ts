@@ -13,11 +13,11 @@ import { extractMetadata, orderMap } from './plugins/plugin-metadata'
 
 export function createApp (nuxt: Nuxt, options: Partial<NuxtApp> = {}): NuxtApp {
   return defu(options, {
-    dir: nuxt.options.srcDir,
-    extensions: nuxt.options.extensions,
-    plugins: [],
-    components: [],
-    templates: [],
+    dir: nuxt.options.srcDir, // 设置应用根目录
+    extensions: nuxt.options.extensions, // 设置支持的文件扩展名
+    plugins: [], // 初始化插件数组
+    components: [], // 初始化组件数组
+    templates: [], // 初始化模板数组
   } as unknown as NuxtApp) as NuxtApp
 }
 
@@ -138,6 +138,7 @@ async function futureCompileTemplate<T> (template: NuxtTemplate<T>, ctx: { nuxt:
 
 export async function resolveApp (nuxt: Nuxt, app: NuxtApp) {
   // Resolve main (app.vue)
+  // 提取 app.vue
   app.mainComponent ||= await findPath(
     nuxt.options._layers.flatMap(layer => [
       join(layer.config.srcDir, 'App'),
@@ -147,14 +148,17 @@ export async function resolveApp (nuxt: Nuxt, app: NuxtApp) {
   app.mainComponent ||= resolve(nuxt.options.appDir, 'components/welcome.vue')
 
   // Resolve root component
+  // 提取 root.vue
   app.rootComponent ||= await findPath(['~/app.root', resolve(nuxt.options.appDir, 'components/nuxt-root.vue')])
 
   // Resolve error component
+  // error.vue
   app.errorComponent ||= (await findPath(
     nuxt.options._layers.map(layer => join(layer.config.srcDir, 'error')),
   )) ?? resolve(nuxt.options.appDir, 'components/nuxt-error-page.vue')
 
   // Resolve layouts/ from all config layers
+  // 提取 layouts
   const layerConfigs = nuxt.options._layers.map(layer => layer.config)
   const reversedConfigs = layerConfigs.slice().reverse()
   app.layouts = {}
@@ -194,6 +198,7 @@ export async function resolveApp (nuxt: Nuxt, app: NuxtApp) {
   }
 
   // Resolve plugins, first extended layers and then base
+  // 提取 plugins
   app.plugins = []
   for (const config of reversedConfigs) {
     const pluginDir = (config.rootDir === nuxt.options.rootDir ? nuxt.options : config).dir?.plugins || 'plugins'
@@ -209,6 +214,7 @@ export async function resolveApp (nuxt: Nuxt, app: NuxtApp) {
   }
 
   // Add back plugins not specified in layers or user config
+  // 添加没在layers配置的插件
   for (const p of [...nuxt.options.plugins].reverse()) {
     const plugin = normalizePlugin(p)
     if (!app.plugins.some(p => p.src === plugin.src)) {
@@ -217,10 +223,12 @@ export async function resolveApp (nuxt: Nuxt, app: NuxtApp) {
   }
 
   // Normalize and de-duplicate plugins and middleware
+  // 对 plugins 和 middleware去重
   app.middleware = uniqueBy(await resolvePaths(nuxt, [...app.middleware].reverse(), 'path'), 'name').reverse()
   app.plugins = uniqueBy(await resolvePaths(nuxt, app.plugins, 'src'), 'src')
 
   // Resolve app.config
+  // 提取 app.config
   app.configs = []
   for (const config of layerConfigs) {
     const appConfigPath = await findPath(resolve(config.srcDir, 'app.config'))
@@ -230,9 +238,12 @@ export async function resolveApp (nuxt: Nuxt, app: NuxtApp) {
   }
 
   // Extend app
+  // 调用钩子【应用解析】完成
   await nuxt.callHook('app:resolve', app)
 
   // Normalize and de-duplicate plugins and middleware
+  // 对 plugins 和 middleware去重
+  // 第一次去重是为了防止初始重复，第二次是为了在 app:resolve 钩子执行后再次清理，因为钩子可能添加了新的 plugin 和 middleware。
   app.middleware = uniqueBy(await resolvePaths(nuxt, app.middleware, 'path'), 'name')
   app.plugins = uniqueBy(await resolvePaths(nuxt, app.plugins, 'src'), 'src')
 }

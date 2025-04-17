@@ -15,7 +15,9 @@ export async function build (nuxt: Nuxt) {
   const app = createApp(nuxt)
   nuxt.apps.default = app
 
-  const generateApp = debounce(() => _generateApp(nuxt, app), undefined, { leading: true })
+  const generateApp = debounce(() => _generateApp(nuxt, app), undefined, {
+    // 确保首次调用立即执行
+    leading: true })
   await generateApp()
 
   if (nuxt.options.dev) {
