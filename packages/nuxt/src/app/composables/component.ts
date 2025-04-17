@@ -74,6 +74,7 @@ export const defineNuxtComponent: typeof defineComponent =
 
         const promises: Promise<any>[] = []
         if (options.asyncData) {
+          // asyncData的触发时机?
           promises.push(runLegacyAsyncData(res, options.asyncData))
         }
 
