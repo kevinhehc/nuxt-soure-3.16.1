@@ -622,6 +622,7 @@ export async function initNitro (nuxt: Nuxt & { _nitro?: Nitro }) {
       return build(nitro)
     }
 
+    // 触发所有路由SSR渲染的时机
     await prerender(nitro)
 
     logger.restoreAll()
