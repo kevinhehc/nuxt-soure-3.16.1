@@ -16,6 +16,7 @@ import type { HeadEntryOptions, Link, Script, SerializableHead, Style } from '@u
 
 import type { NuxtPayload, NuxtSSRContext } from 'nuxt/app'
 
+// ssr的核心 getSSRRenderer
 import { getEntryIds, getSPARenderer, getSSRRenderer, getSSRStyles } from '../utils/build-files'
 import { islandCache, islandPropCache, payloadCache, sharedPrerenderCache } from '../utils/cache'
 import { renderPayloadJsonScript, renderPayloadResponse, renderPayloadScript, splitPayload } from '../utils/payload'
@@ -126,6 +127,7 @@ const ROOT_NODE_REGEX = new RegExp(`^<${appRootTag}[^>]*>([\\s\\S]*)<\\/${appRoo
 
 const PRERENDER_NO_SSR_ROUTES = new Set(['/index.html', '/200.html', '/404.html'])
 
+// defineRenderHandler 类似于 spring的 一个接口的处理
 export default defineRenderHandler(async (event): Promise<Partial<RenderResponse>> => {
   const nitroApp = useNitroApp()
 

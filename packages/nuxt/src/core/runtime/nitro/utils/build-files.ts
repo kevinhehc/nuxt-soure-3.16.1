@@ -3,6 +3,7 @@ import {
 } from 'vue-bundle-renderer/runtime'
 import type { Manifest as ClientManifest } from 'vue-bundle-renderer'
 import type { Manifest } from 'vite'
+// ssr 的核心 renderToString
 import { renderToString as _renderToString } from 'vue/server-renderer'
 import { propsToString } from '@unhead/vue/server'
 
