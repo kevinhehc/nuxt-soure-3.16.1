@@ -97,6 +97,7 @@ export async function isPrerendered (url = useRoute().path) {
   // Note: Alternative for server is checking x-nitro-prerender header
   if (!appManifest) { return !!nuxtApp.payload.prerenderedAt }
   url = withoutTrailingSlash(url)
+  // manifest
   const manifest = await getAppManifest()
   if (manifest.prerendered.includes(url)) {
     return true

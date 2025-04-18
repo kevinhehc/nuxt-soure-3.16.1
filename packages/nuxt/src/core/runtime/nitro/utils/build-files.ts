@@ -37,6 +37,7 @@ export const getSSRStyles = lazyCachedFunction((): Promise<Record<string, () => 
 // -- SSR Renderer --
 export const getSSRRenderer = lazyCachedFunction(async () => {
   // Load client manifest
+  // manifest
   const manifest = await getClientManifest()
   if (!manifest) { throw new Error('client.manifest is not available') }
 
@@ -67,6 +68,7 @@ export const getSSRRenderer = lazyCachedFunction(async () => {
 
 // -- SPA Renderer --
 export const getSPARenderer = lazyCachedFunction(async () => {
+  // manifest
   const manifest = await getClientManifest()
 
   // @ts-expect-error virtual file
