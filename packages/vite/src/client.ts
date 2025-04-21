@@ -1,27 +1,47 @@
+// 引入类型，用于处理 HTTP 请求和响应
 import type { IncomingMessage, ServerResponse } from 'node:http'
+// 工具库，用于路径拼接与解析
 import { join, resolve } from 'pathe'
+// 导入 Vite 核心功能
 import * as vite from 'vite'
+// 引入 Vue 插件，支持 Vue SFC 文件的编译
 import vuePlugin from '@vitejs/plugin-vue'
+// 支持 JSX 的 Vue 插件
 import viteJsxPlugin from '@vitejs/plugin-vue-jsx'
+// 引入 Vite 构建和服务配置类型
 import type { BuildOptions, ServerOptions } from 'vite'
+// Nuxt 的日志工具
 import { logger } from '@nuxt/kit'
+// 获取可用端口的工具
 import { getPort } from 'get-port-please'
+// URL 工具函数
 import { joinURL, withoutLeadingSlash } from 'ufo'
+// 对象合并工具，支持深度合并
 import { defu } from 'defu'
+// 定义 node 环境变量别名
 import { defineEnv } from 'unenv'
+// 用于解析模块路径的工具
 import { resolveModulePath } from 'exsolve'
+// h3 框架的工具，用于处理事件和跨域
 import { defineEventHandler, handleCors, setHeader } from 'h3'
+// 引入 Nuxt Vite 配置类型
 import type { ViteConfig } from '@nuxt/schema'
 
+// 引入构建上下文类型
 import type { ViteBuildContext } from './vite'
+// 引入多个自定义插件
 import { DevStyleSSRPlugin } from './plugins/dev-ssr-css'
 import { RuntimePathsPlugin } from './plugins/paths'
 import { TypeCheckPlugin } from './plugins/type-check'
 import { ModulePreloadPolyfillPlugin } from './plugins/module-preload-polyfill'
 import { ViteNodePlugin } from './vite-node'
+// 创建自定义 Vite 日志工具
 import { createViteLogger } from './utils/logger'
 
+// 主函数：用于构建 Nuxt 客户端端代码
 export async function buildClient (ctx: ViteBuildContext) {
+
+  // Node 兼容性处理（可选）
   const nodeCompat = ctx.nuxt.options.experimental.clientNodeCompat
     ? {
         alias: defineEnv({
@@ -34,12 +54,16 @@ export async function buildClient (ctx: ViteBuildContext) {
       }
     : { alias: {}, define: {} }
 
+  // 创建 Vite 客户端配置
   const clientConfig: ViteConfig = vite.mergeConfig(ctx.config, vite.mergeConfig({
     configFile: false,
+    // 基本路径配置 设置构建资源的基础路径：开发环境使用拼接路径，生产环境使用相对路径。
     base: ctx.nuxt.options.dev
       ? joinURL(ctx.nuxt.options.app.baseURL.replace(/^\.\//, '/') || '/', ctx.nuxt.options.app.buildAssetsDir)
       : './',
+    // 渲染内联资源路径配置
     experimental: {
+      // 对于 asset 文件，使用相对路径；其他使用运行时变量。
       renderBuiltUrl: (filename, { type, hostType }) => {
         if (hostType !== 'js' || type === 'asset') {
           // In CSS we only use relative paths until we craft a clever runtime CSS hack
@@ -51,6 +75,7 @@ export async function buildClient (ctx: ViteBuildContext) {
     css: {
       devSourcemap: !!ctx.nuxt.options.sourcemap.client,
     },
+    // 定义全局常量（define 字段）
     define: {
       'process.env.NODE_ENV': JSON.stringify(ctx.config.mode),
       'process.server': false,
@@ -66,6 +91,7 @@ export async function buildClient (ctx: ViteBuildContext) {
       'module.hot': false,
       ...nodeCompat.define,
     },
+    // 依赖优化（optimizeDeps）
     optimizeDeps: {
       entries: [ctx.entry],
       include: [],
@@ -81,6 +107,7 @@ export async function buildClient (ctx: ViteBuildContext) {
       // all possible deps even if they are not used yet.
       //
       // @see https://github.com/antfu/nuxt-better-optimize-deps#how-it-works
+      // 明确不需要优化的依赖（这些已是 ESM 模块），避免二次打包和冲突。
       exclude: [
         // Vue
         'vue',
@@ -114,6 +141,7 @@ export async function buildClient (ctx: ViteBuildContext) {
         '#app-manifest',
       ],
     },
+    // 模块解析配置（resolve.alias）
     resolve: {
       alias: {
         // user aliases
@@ -127,6 +155,7 @@ export async function buildClient (ctx: ViteBuildContext) {
         'vue',
       ],
     },
+    // 缓存、输出目录和 Rollup 构建配置
     cacheDir: resolve(ctx.nuxt.options.rootDir, ctx.config.cacheDir ?? 'node_modules/.cache/vite', 'client'),
     build: {
       sourcemap: ctx.nuxt.options.sourcemap.client ? ctx.config.build?.sourcemap ?? ctx.nuxt.options.sourcemap.client : false,
@@ -136,6 +165,7 @@ export async function buildClient (ctx: ViteBuildContext) {
         input: { entry: ctx.entry },
       },
     },
+    // 插件注册
     plugins: [
       DevStyleSSRPlugin({
         srcDir: ctx.nuxt.options.srcDir,
@@ -147,6 +177,7 @@ export async function buildClient (ctx: ViteBuildContext) {
       ViteNodePlugin(ctx),
     ],
     appType: 'custom',
+    // Server 相关配置
     server: {
       warmup: {
         clientFiles: [ctx.entry],
@@ -155,21 +186,25 @@ export async function buildClient (ctx: ViteBuildContext) {
     },
   } satisfies vite.InlineConfig, ctx.nuxt.options.vite.$client || {}))
 
+  // 日志系统替换为 Nuxt 自定义
   clientConfig.customLogger = createViteLogger(clientConfig)
 
   // In build mode we explicitly override any vite options that vite is relying on
   // to detect whether to inject production or development code (such as HMR code)
+  // 非开发模式：禁用 HMR
   if (!ctx.nuxt.options.dev) {
     clientConfig.server!.hmr = false
   }
 
   // Inject an h3-based CORS handler in preference to vite's
+  // 关闭 Vite 默认 CORS，使用 h3 提供的
   const useViteCors = clientConfig.server?.cors !== undefined
   if (!useViteCors) {
     clientConfig.server!.cors = false
   }
 
   // We want to respect users' own rollup output options
+  // 输出配置优化：输出文件名带 hash
   const fileNames = withoutLeadingSlash(join(ctx.nuxt.options.app.buildAssetsDir, '[hash].js'))
   clientConfig.build!.rollupOptions = defu(clientConfig.build!.rollupOptions!, {
     output: {
@@ -178,6 +213,7 @@ export async function buildClient (ctx: ViteBuildContext) {
     } satisfies NonNullable<BuildOptions['rollupOptions']>['output'],
   }) as any
 
+  // HMR 配置补全（开发环境）
   if (clientConfig.server && clientConfig.server.hmr !== false) {
     const serverDefaults: Omit<ServerOptions, 'hmr'> & { hmr: Exclude<ServerOptions['hmr'], boolean> } = {
       hmr: {
@@ -198,6 +234,7 @@ export async function buildClient (ctx: ViteBuildContext) {
   }
 
   // Add analyze plugin if needed
+  // 插件扩展（分析插件 + TS 类型检查 + preload polyfill）
   if (!ctx.nuxt.options.test && ctx.nuxt.options.build.analyze && (ctx.nuxt.options.build.analyze === true || ctx.nuxt.options.build.analyze.enabled)) {
     clientConfig.plugins!.push(...await import('./plugins/analyze').then(r => r.analyzePlugin(ctx)))
   }
@@ -212,21 +249,26 @@ export async function buildClient (ctx: ViteBuildContext) {
     entry: ctx.entry,
   }))
 
+
+  // 调用钩子，允许用户扩展配置
   await ctx.nuxt.callHook('vite:extendConfig', clientConfig, { isClient: true, isServer: false })
 
+  // Vue 插件注册（必须放在最前）
   clientConfig.plugins!.unshift(
     vuePlugin(clientConfig.vue),
     viteJsxPlugin(clientConfig.vueJsx),
   )
 
+  // 钩子：配置已解析
   await ctx.nuxt.callHook('vite:configResolved', clientConfig, { isClient: true, isServer: false })
 
   // Prioritize `optimizeDeps.exclude`. If same dep is in `include` and `exclude`, remove it from `include`
+  // 优化 include/exclude 冲突
   clientConfig.optimizeDeps!.include = clientConfig.optimizeDeps!.include!
     .filter(dep => !clientConfig.optimizeDeps!.exclude!.includes(dep))
 
   if (ctx.nuxt.options.dev) {
-    // Dev
+    // Dev 启动 Vite 开发服务器 插入中间件来跳过 transform，增加跨域处理。
     const viteServer = await vite.createServer(clientConfig)
     ctx.clientServer = viteServer
     ctx.nuxt.hook('close', () => viteServer.close())
@@ -271,7 +313,7 @@ export async function buildClient (ctx: ViteBuildContext) {
     })
     await ctx.nuxt.callHook('server:devHandler', viteMiddleware)
   } else {
-    // Build
+    // Build 生产模式：执行构建
     logger.info('Building client...')
     const start = Date.now()
     logger.restoreAll()

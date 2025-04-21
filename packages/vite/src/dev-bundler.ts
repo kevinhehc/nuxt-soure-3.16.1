@@ -5,41 +5,45 @@ import { builtinModules } from 'node:module'
 import { isAbsolute, normalize, resolve } from 'pathe'
 import type * as vite from 'vite'
 import type { isExternal } from 'externality'
-import { genDynamicImport, genObjectFromRawEntries } from 'knitwork'
-import { debounce } from 'perfect-debounce'
+import { genDynamicImport, genObjectFromRawEntries } from 'knitwork' // 用于生成 import 动态代码及对象构造
+import { debounce } from 'perfect-debounce' // 防抖函数，用于监听文件变化时避免频繁构建
 import { isIgnored, logger } from '@nuxt/kit'
-import { hashId, isCSS, uniq } from './utils'
-import { createIsExternal } from './utils/external'
-import { writeManifest } from './manifest'
-import type { ViteBuildContext } from './vite'
+import { hashId, isCSS, uniq } from './utils' // 工具函数：生成 hash，判断 CSS，数组去重
+import { createIsExternal } from './utils/external' // 工具函数：创建外部模块判断函数
+import { writeManifest } from './manifest' // 写入 CSS manifest 文件
+import type { ViteBuildContext } from './vite'  // 构建上下文类型
 
 interface TransformChunk {
-  id: string
-  code: string
-  deps: string[]
-  parents: string[]
+  id: string // 模块 ID（路径）
+  code: string // 编译后的代码字符串
+  deps: string[] // 静态依赖
+  parents: string[]  // 父模块 ID（反向追踪用）
 }
 
 interface SSRTransformResult {
-  code: string
-  map: object
-  deps: string[]
-  dynamicDeps: string[]
+  code: string  // 编译结果代码
+  map: object  // sourcemap 信息
+  deps: string[]  // 静态依赖
+  dynamicDeps: string[] // 动态依赖（import()）
 }
 
 interface TransformOptions {
-  viteServer: vite.ViteDevServer
-  isExternal(id: string): ReturnType<typeof isExternal>
+  viteServer: vite.ViteDevServer  // Vite 开发服务器实例
+  isExternal(id: string): ReturnType<typeof isExternal>  // 判断模块是否为外部依赖
 }
 
+// 将某模块转为 SSR 格式的函数体
 async function transformRequest (opts: TransformOptions, id: string) {
   // Virtual modules start with `\0`
+  // 标准化模块 ID（修复 Vite 虚拟模块路径）
   if (id && id.startsWith('/@id/__x00__')) {
     id = '\0' + id.slice('/@id/__x00__'.length)
   }
   if (id && id.startsWith('/@id/')) {
     id = id.slice('/@id/'.length)
   }
+
+  // 绝对路径模块处理：相对于根目录解析路径
   if (id && !id.startsWith('/@fs/') && id.startsWith('/')) {
     // Relative to the root directory
     const resolvedPath = resolve(opts.viteServer.config.root, '.' + id)
@@ -49,9 +53,11 @@ async function transformRequest (opts: TransformOptions, id: string) {
   }
 
   // On Windows, we prefix absolute paths with `/@fs/` to skip node resolution algorithm
+  // Windows 路径前缀修复
   id = id.replace(/^\/?(?=\w:)/, '/@fs/')
 
   // Remove query and @fs/ for external modules
+  // 检查是否为外部模块，构造 genDynamicImport 包装的代码段
   const externalId = id.replace(/\?v=\w+$|^\/@fs/, '')
 
   if (await opts.isExternal(externalId)) {
@@ -77,6 +83,7 @@ ${genDynamicImport(path, { wrapper: false })}
   }
 
   // Transform
+  // 调用 Vite transformRequest 进行 SSR 转换
   const res: SSRTransformResult = await opts.viteServer.transformRequest(id, { ssr: true }).catch((err) => {
     logger.warn(`[SSR] Error transforming ${id}:`, err)
     // console.error(err)
@@ -89,6 +96,7 @@ ${res.code || '/* empty */'};
   return { code, deps: res.deps || [], dynamicDeps: res.dynamicDeps || [] }
 }
 
+// 递归处理依赖模块
 async function transformRequestRecursive (opts: TransformOptions, id: string, parent = '<entry>', chunks: Record<string, TransformChunk> = {}) {
   if (chunks[id]) {
     chunks[id].parents.push(parent)
@@ -109,6 +117,7 @@ async function transformRequestRecursive (opts: TransformOptions, id: string, pa
   return Object.values(chunks)
 }
 
+// 打包入口模块及其所有依赖为 SSR 模块集合
 async function bundleRequest (opts: TransformOptions, entryURL: string) {
   const chunks = (await transformRequestRecursive(opts, entryURL))!
 
@@ -122,11 +131,13 @@ async function bundleRequest (opts: TransformOptions, entryURL: string) {
 const ${hashId(chunk.id + '-' + chunk.code)} = ${chunk.code}
 `).join('\n')
 
+  // 生成模块映射（ID -> 函数名）
   const manifestCode = `const __modules__ = ${
     genObjectFromRawEntries(chunks.map(chunk => [chunk.id, hashId(chunk.id + '-' + chunk.code)]))
   }`
 
   // https://github.com/vitejs/vite/blob/main/packages/vite/src/node/ssr/ssrModuleLoader.ts
+  // 注入 SSR 加载器代码，仿 Vite 的内部实现
   const ssrModuleLoader = `
 const __pendingModules__ = new Map()
 const __pendingImports__ = new Map()
@@ -212,6 +223,7 @@ async function __instantiateModule__(url, urlStack) {
 }
 `
 
+  // 合并最终输出代码
   const code = [
     chunksCode,
     manifestCode,
@@ -225,6 +237,7 @@ async function __instantiateModule__(url, urlStack) {
   }
 }
 
+// 构建并监听开发环境 SSR 模块
 export async function initViteDevBundler (ctx: ViteBuildContext, onBuild: () => Promise<any>) {
   const viteServer = ctx.ssrServer!
   const options: TransformOptions = {
@@ -233,11 +246,13 @@ export async function initViteDevBundler (ctx: ViteBuildContext, onBuild: () => 
   }
 
   // Build and watch
+  // 实际构建逻辑，调用 bundleRequest + 写文件
   const _doBuild = async () => {
     const start = Date.now()
     const { code, ids } = await bundleRequest(options, ctx.entry)
     await writeFile(resolve(ctx.nuxt.options.buildDir, 'dist/server/server.mjs'), code, 'utf-8')
     // Have CSS in the manifest to prevent FOUC on dev SSR
+    // 收集 CSS 资源，用于防止闪烁（FOUC）
     const manifestIds: string[] = []
     for (const i of ids) {
       if (isCSS(i)) {
@@ -252,9 +267,11 @@ export async function initViteDevBundler (ctx: ViteBuildContext, onBuild: () => 
   const doBuild = debounce(_doBuild)
 
   // Initial build
+  // 初始构建
   await _doBuild()
 
   // Watch
+  // 监听文件变化（非忽略项），触发重新构建
   viteServer.watcher.on('all', (_event, file) => {
     file = normalize(file) // Fix windows paths
     if (file.indexOf(ctx.nuxt.options.buildDir) === 0 || isIgnored(file)) { return }
