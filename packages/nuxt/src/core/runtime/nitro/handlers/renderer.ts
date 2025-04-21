@@ -385,7 +385,7 @@ export default defineRenderHandler(async (event): Promise<Partial<RenderResponse
   const NO_SCRIPTS = process.env.NUXT_NO_SCRIPTS || routeOptions.noScripts
 
   // Setup head
-  // 从 SSR 上下文中提取当前请求需要的资源（CSS 和 JS）
+  // !!! 从 SSR 上下文中提取当前请求需要的资源（CSS 和 JS）
   const { styles, scripts } = getRequestDependencies(ssrContext, renderer.rendererContext)
   // 1. Preload payloads and app manifest
   // 预加载 payload 和 manifest
