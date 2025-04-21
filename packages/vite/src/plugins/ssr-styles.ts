@@ -1,35 +1,42 @@
-import { pathToFileURL } from 'node:url'
-import type { Plugin } from 'vite'
-import { dirname, relative } from 'pathe'
-import { genImport, genObjectFromRawEntries } from 'knitwork'
-import { filename as _filename } from 'pathe/utils'
-import { parseQuery, parseURL } from 'ufo'
-import type { Component } from '@nuxt/schema'
-import MagicString from 'magic-string'
-import { findStaticImports } from 'mlly'
+import { pathToFileURL } from 'node:url' // 从 Node.js 的 url 模块导入 pathToFileURL，用于将文件路径转换为 file URL。
+import type { Plugin } from 'vite'  // 从 Vite 中导入 Plugin 类型，用于定义插件。
+import { dirname, relative } from 'pathe'  // 从 pathe 模块导入 dirname 和 relative，处理文件路径。
+import { genImport, genObjectFromRawEntries } from 'knitwork' // 从 knitwork 导入用于生成代码的辅助函数。
+import { filename as _filename } from 'pathe/utils'  // 从 pathe/utils 导入 filename 并重命名为 _filename，用于提取文件名。
+import { parseQuery, parseURL } from 'ufo' // 从 ufo 模块导入 URL 和查询参数解析器。
+import type { Component } from '@nuxt/schema' // 从 Nuxt schema 中导入组件类型定义。
+import MagicString from 'magic-string'  // 导入 MagicString，用于对源代码进行字符串变换。
+import { findStaticImports } from 'mlly'  // 导入用于查找静态导入语句的函数。
 
-import { isCSS, isVue } from '../utils'
+import { isCSS, isVue } from '../utils'  // 导入判断是否为 CSS 或 Vue 文件的辅助函数。
 
+// 定义 SSR 样式插件的配置接口
 interface SSRStylePluginOptions {
-  srcDir: string
-  chunksWithInlinedCSS: Set<string>
-  shouldInline?: ((id?: string) => boolean) | boolean
-  components: Component[]
-  clientCSSMap: Record<string, Set<string>>
-  entry: string
-  globalCSS: string[]
-  mode: 'server' | 'client'
+  srcDir: string // 源代码目录
+  chunksWithInlinedCSS: Set<string> // 已内联 CSS 的 chunk 集合
+  shouldInline?: ((id?: string) => boolean) | boolean  // 判断是否需要内联样式
+  components: Component[] // 所有组件的列表
+  clientCSSMap: Record<string, Set<string>> // 客户端模块对应的 CSS 文件映射
+  entry: string // 入口文件 ID
+  globalCSS: string[] // 全局 CSS 文件列表
+  mode: 'server' | 'client' // 构建模式：服务端或客户端
 }
 
+// 正则表达式，匹配支持的源码文件（Vue、JS、TS）
 const SUPPORTED_FILES_RE = /\.(?:vue|(?:[cm]?j|t)sx?)$/
 
+// 定义插件函数
 export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
+  // 记录每个模块的 CSS 引用
   const cssMap: Record<string, { files: string[], inBundle?: boolean }> = {}
   const idRefMap: Record<string, string> = {}
 
+  // 将路径转为相对 srcDir 的路径
   const relativeToSrcDir = (path: string) => relative(options.srcDir, path)
 
+  // 缓存已发出警告的文件，避免重复
   const warnCache = new Set<string>()
+  // 筛选出需要作为岛屿（island）组件的 Vue 组件
   const islands = options.components.filter(component =>
     component.island ||
     // .server components without a corresponding .client component will need to be rendered as an island
@@ -37,34 +44,44 @@ export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
   )
 
   return {
+    // 插件名称
     name: 'ssr-styles',
     resolveId: {
+      // 插件钩子的调用顺序
       order: 'pre',
       async handler (id, importer, _options) {
         // We want to remove side effects (namely, emitting CSS) from `.vue` files and explicitly imported `.css` files
         // but only as long as we are going to inline that CSS.
+        // 如果不需要内联样式则跳过
         if ((options.shouldInline === false || (typeof options.shouldInline === 'function' && !options.shouldInline(importer)))) {
           return
         }
 
+        // 对特定模块进行处理
         if (id === '#build/css' || id.endsWith('.vue') || isCSS(id)) {
           const res = await this.resolve(id, importer, { ..._options, skipSelf: true })
           if (res) {
             return {
               ...res,
+              // 禁止副作用（例如 CSS 插入）
               moduleSideEffects: false,
             }
           }
         }
       },
     },
+    // 打包结束阶段触发
     generateBundle (outputOptions) {
+      // 客户端模式不处理
       if (options.mode === 'client') { return }
 
+      // 存储已生成的文件
       const emitted: Record<string, string> = {}
+      // 没有 CSS 或未打包的不处理
       for (const [file, { files, inBundle }] of Object.entries(cssMap)) {
         // File has been tree-shaken out of build (or there are no styles to inline)
         if (!files.length || !inBundle) { continue }
+        // 获取文件名
         const fileName = filename(file)
         const base = typeof outputOptions.assetFileNames === 'string'
           ? outputOptions.assetFileNames
@@ -79,6 +96,7 @@ export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
 
         const baseDir = dirname(base)
 
+        // 生成包含样式导入的模块
         emitted[file] = this.emitFile({
           type: 'asset',
           name: `${fileName}-styles.mjs`,
@@ -96,6 +114,7 @@ export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
 
       // TODO: remove css from vite preload arrays
 
+      // 生成一个总样式模块文件 styles.mjs，导出所有样式模块的懒加载函数
       this.emitFile({
         type: 'asset',
         fileName: 'styles.mjs',
@@ -109,7 +128,9 @@ export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
           ].join('\n'),
       })
     },
+    // 对 chunk 进行处理
     renderChunk (_code, chunk) {
+      // 判断是否为入口模块
       const isEntry = chunk.facadeModuleId === options.entry
       if (isEntry) {
         options.clientCSSMap[chunk.facadeModuleId!] ||= new Set()
@@ -144,10 +165,13 @@ export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
 
       return null
     },
+
+    // 对源代码进行转换
     async transform (code, id) {
       if (options.mode === 'client') {
         // We will either teleport global CSS to the 'entry' chunk on the server side
         // or include it here in the client build so it is emitted in the CSS.
+        // 客户端模式下，在入口模块注入全局样式
         if (id === options.entry && (options.shouldInline === true || (typeof options.shouldInline === 'function' && options.shouldInline(id)))) {
           const s = new MagicString(code)
           const idClientCSSMap = options.clientCSSMap[id] ||= new Set()
@@ -176,13 +200,16 @@ export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
         return
       }
 
+      // 解析文件路径和查询参数
       const { pathname, search } = parseURL(decodeURIComponent(pathToFileURL(id).href))
 
+      // 非 island 组件或无样式映射则跳过
       if (!(id in options.clientCSSMap) && !islands.some(c => c.filePath === pathname)) { return }
 
       const query = parseQuery(search)
       if (query.macro || query.nuxt_component) { return }
 
+      // 如果不是岛屿组件且不应内联，跳过
       if (!islands.some(c => c.filePath === pathname)) {
         if (options.shouldInline === false || (typeof options.shouldInline === 'function' && !options.shouldInline(id))) { return }
       }
@@ -245,6 +272,7 @@ export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
   }
 }
 
+// 提取文件名，去除查询参数
 function filename (name: string) {
   return _filename(name.replace(/\?.+$/, ''))
 }
