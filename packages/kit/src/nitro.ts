@@ -4,6 +4,22 @@ import { normalize } from 'pathe'
 import { useNuxt } from './context'
 import { toArray } from './utils'
 
+// 用于在模块或插件开发时动态扩展 Nitro 服务器（API层）功能的方法集合。
+//
+// 主要负责：
+//
+// 注册新的 API 路由（server handler）
+//
+// 注册开发期的临时路由
+//
+// 注册 Nitro 插件
+//
+// 注册需要预渲染的路由
+//
+// 管理 Nitro 的自动导入（server imports）
+//
+// 管理 Nitro 扫描的目录（server scan dirs）
+
 const HANDLER_METHOD_RE = /\.(get|head|patch|post|put|delete|connect|options|trace)(\.\w+)*$/
 /**
  * normalize handler object

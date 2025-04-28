@@ -6,6 +6,16 @@ import { useNuxt } from './context'
 import { logger } from './logger'
 import { addTemplate } from './template'
 
+// 用于在运行时动态添加自定义 Layout（布局）到 Nuxt 应用中的工具方法。
+//
+// 主要用于：
+//
+// 在模块开发时注册新的布局页面
+//
+// 动态扩展用户项目中的 Layout 系统
+//
+// 支持 Nuxt 2 和 Nuxt 3 两套不同机制
+
 const LAYOUT_RE = /["']/g
 export function addLayout (this: any, template: NuxtTemplate | string, name?: string) {
   const nuxt = useNuxt()

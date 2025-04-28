@@ -2,6 +2,14 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { createContext, getContext } from 'unctx'
 import type { Nuxt } from '@nuxt/schema'
 
+// 统一管理和访问当前 Nuxt 实例（Context）的方法。
+//
+// 它主要解决两个问题：
+//
+// 在任何地方都可以拿到当前运行的 Nuxt 实例。
+//
+// 支持在异步操作（比如 await 后面）正确保存和恢复上下文。
+
 /**
  * Direct access to the Nuxt global context - see https://github.com/unjs/unctx.
  * @deprecated Use `getNuxtCtx` instead

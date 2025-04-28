@@ -3,6 +3,24 @@ import ignore from 'ignore'
 import { join, relative, resolve } from 'pathe'
 import { tryUseNuxt } from './context'
 
+// 用于根据 .nuxtignore 文件和项目配置，判断某个文件路径是否应该被忽略。
+//
+// 主要功能就是：
+//
+// 自动读取 .nuxtignore
+//
+// 结合 nuxt.config.ts 里的 ignore 配置项
+//
+// 提供统一的 isIgnored(path) 检查函数
+//
+// 这套逻辑可以用于：
+//
+// Dev server 监听时排除某些文件变化
+//
+// Build 阶段忽略某些文件
+//
+// Lint、生成等场景跳过无关文件
+
 export function createIsIgnored (nuxt = tryUseNuxt()) {
   return (pathname: string, stats?: unknown) => isIgnored(pathname, stats, nuxt)
 }

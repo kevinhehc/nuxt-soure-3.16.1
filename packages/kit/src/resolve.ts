@@ -9,6 +9,8 @@ import { tryUseNuxt } from './context'
 import { isIgnored } from './ignore'
 import { toArray } from './utils'
 
+// 标准化路径解析工具集合，用于在模块、插件、自动导入、模板注册等场景下，正确解析路径、文件、目录，支持 Nuxt 特有的 alias、extensions、VFS（虚拟文件系统）等特性。
+
 export interface ResolvePathOptions {
   /** Base for resolving paths from. Default is Nuxt rootDir. */
   cwd?: string

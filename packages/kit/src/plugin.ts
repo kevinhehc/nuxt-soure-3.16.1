@@ -8,6 +8,17 @@ import { tryUseNuxt, useNuxt } from './context'
 import { addTemplate } from './template'
 import { resolveAlias } from './resolve'
 
+// 用于动态注册 Nuxt 插件（Plugins）的标准方法集合。
+//
+// 主要负责：
+//
+// 标准化插件对象
+//
+// 插件路径解析和模式（mode）识别
+//
+// 插件添加到 Nuxt 配置（nuxt.options.plugins）
+
+
 /**
  * Normalize a nuxt plugin object
  */

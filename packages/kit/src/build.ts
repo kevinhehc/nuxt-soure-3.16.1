@@ -4,6 +4,16 @@ import type { UserConfig as ViteConfig, Plugin as VitePlugin } from 'vite'
 import { useNuxt } from './context'
 import { toArray } from './utils'
 
+// 动态修改和扩展 Vite、Webpack、Rspack 配置的统一工具函数。
+//
+// 主要用于：
+//
+// 动态给构建工具（Vite/Webpack/Rspack）添加插件
+//
+// 动态修改 client/server 的构建配置
+//
+// 在模块开发时优雅地扩展构建器行为
+
 export interface ExtendConfigOptions {
   /**
    * Install plugin on dev

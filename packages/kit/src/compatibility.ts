@@ -3,6 +3,16 @@ import { readPackageJSON } from 'pkg-types'
 import type { Nuxt, NuxtCompatibility, NuxtCompatibilityIssues } from '@nuxt/schema'
 import { useNuxt } from './context'
 
+// 用于检测当前 Nuxt 项目的版本、构建器、桥接情况，判断是否符合模块要求的兼容性工具。
+//
+// 主要应用场景是：
+//
+// 模块开发时检查 Nuxt 版本要求
+//
+// 插件动态启用或禁用
+//
+// 提前提示用户 Nuxt 环境不符合要求
+
 const SEMANTIC_VERSION_RE = /-\d+\.[0-9a-f]+/
 export function normalizeSemanticVersion (version: string) {
   return version.replace(SEMANTIC_VERSION_RE, '') // Remove edge prefix

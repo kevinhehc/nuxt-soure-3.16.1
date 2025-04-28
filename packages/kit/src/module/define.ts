@@ -37,6 +37,8 @@ export function defineNuxtModule<TOptions extends ModuleOptions> (
   }
 }
 
+// 当你用 defineNuxtModule() 注册一个模块时，Nuxt 会用 _defineNuxtModule() 来把你的模块包一层，
+// 让它变得统一规范、兼容 Nuxt 2/3，同时还能支持动态选项解析、自动兼容性检查、性能监控等。
 function _defineNuxtModule<
   TOptions extends ModuleOptions,
   TOptionsDefaults extends Partial<TOptions>,
@@ -62,6 +64,12 @@ function _defineNuxtModule<
         ? ResolvedModuleOptions<TOptions, TOptionsDefaults>
         : TOptions
     > {
+    // 负责动态解析模块的最终选项。
+    // 解析来源顺序是：
+    // 用户直接传的 inlineOptions
+    // nuxt.config.ts 里的模块配置（通过 configKey）
+    // 模块自带的 defaults（可以是对象或者 async 函数）
+    // 如果模块提供了 schema，会用 schema 校验并应用默认值。
     const nuxtConfigOptionsKey = module.meta.configKey || module.meta.name
 
     const nuxtConfigOptions: Partial<TOptions> = nuxtConfigOptionsKey && nuxtConfigOptionsKey in nuxt.options ? nuxt.options[<keyof NuxtOptions> nuxtConfigOptionsKey] : {}
@@ -83,6 +91,14 @@ function _defineNuxtModule<
 
   // Module format is always a simple function
   async function normalizedModule (this: any, inlineOptions: Partial<TOptions>, nuxt: Nuxt): Promise<ModuleSetupReturn> {
+    // 避免重复安装（记录在 _requiredModules）
+    // 检查模块兼容性（调用 checkNuxtCompatibility）
+    // 兼容 Nuxt 2 的 hook 系统（调用 nuxt2Shims)
+    // 调用 getOptions，拿到解析后的最终 options
+    // 注册 module.hooks （如果有的话）
+    // 调用 module.setup(options, nuxt)，执行模块逻辑
+    // 测量 setup 执行耗时，如果太慢（>5秒）警告提示
+    // 返回 setup 返回的内容，加上 timings 信息
     nuxt ||= tryUseNuxt() || this.nuxt /* invoked by nuxt 2 */
 
     // Avoid duplicate installs
@@ -140,13 +156,20 @@ function _defineNuxtModule<
   }
 
   // Define getters for options and meta
+  // 返回模块的 meta 信息
   normalizedModule.getMeta = () => Promise.resolve(module.meta)
+  // 返回解析模块配置选项的 Promise
   normalizedModule.getOptions = getOptions
 
   return <NuxtModule<TOptions, TOptionsDefaults, TWith>> normalizedModule
 }
 
 // -- Nuxt 2 compatibility shims --
+// 果在 Nuxt 2 环境下运行：
+// 把 nuxt.hooks 直接指向 nuxt 本身
+// 注入 useNuxt() 上下文管理
+// 支持虚拟模板 (getContents) 写入 .nuxt/ 目录
+// 保证即使在 Nuxt 2 也能正常运行新的模块。
 const NUXT2_SHIMS_KEY = '__nuxt2_shims_key__'
 function nuxt2Shims (nuxt: Nuxt) {
   // Avoid duplicate install and only apply to Nuxt2

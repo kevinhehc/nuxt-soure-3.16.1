@@ -12,13 +12,35 @@ import { directoryToURL } from '../internal/esm'
 import { useNuxt } from '../context'
 import { resolveAlias } from '../resolve'
 
+// 动态安装并执行一个 Nuxt Module 的完整流程。
+//
+// 也就是说，在 Nuxt 项目启动时，或者在模块开发时，
+// 如果要加载并安装一个模块（比如 @nuxt/image、nuxt-security），就会走这套逻辑。
+
+
 const NODE_MODULES_RE = /[/\\]node_modules[/\\]/
 
 /** Installs a module on a Nuxt instance. */
+// moduleToInstall：模块名字（string）或者模块函数（NuxtModule）
+// inlineOptions：给模块传的配置参数
+// nuxt：当前的 Nuxt 实例（默认用 useNuxt()）
 export async function installModule<
   T extends string | NuxtModule,
   Config extends Extract<NonNullable<NuxtConfig['modules']>[number], [T, any]>,
 > (moduleToInstall: T, inlineOptions?: [Config] extends [never] ? any : Config[1], nuxt: Nuxt = useNuxt()) {
+  // 1、加载模块实例
+  //       调用 loadNuxtModuleInstance，解析模块路径并真正 import 模块代码。
+  // 2、处理本地 layer module 目录
+  //       把 layers/*/modules/ 路径收集起来，避免后续误判。
+  //
+  // 3、执行模块函数
+  //      如果是 Nuxt 2：调用 moduleContainer
+  //      如果是 Nuxt 3，且开启 debugModuleMutation：用 asyncLocalStorage 执行
+  //      正常情况下：直接执行 nuxtModule(inlineOptions, nuxt)
+  // 4、记录模块路径、transpile路径、modulesDir
+  //      标准化模块目录并加到 build.transpile 和 modulesDir。
+  // 5、记录模块安装到 _installedModules
+  //      保存模块的 meta 信息、setup耗时（timings）、入口路径（entryPath）。
   const { nuxtModule, buildTimeModuleMeta, resolvedModulePath } = await loadNuxtModuleInstance(moduleToInstall, nuxt)
 
   const localLayerModuleDirs: string[] = []
@@ -69,7 +91,10 @@ export async function installModule<
 }
 
 // --- Internal ---
-
+// 给定一个路径，
+// 如果是文件路径（比如 /node_modules/foo/index.js），返回对应目录（/node_modules/foo）。
+// 如果是目录本身，直接返回。
+// 主要用于确定 transpile 的根路径。
 export function getDirectory (p: string) {
   try {
     // we need to target directories instead of module file paths themselves
@@ -81,12 +106,30 @@ export function getDirectory (p: string) {
   return p
 }
 
+// 对于一个模块路径，
+// 取出 node_modules/ 后面的部分，作为 transpile 的路径。
+// 比如 /node_modules/@nuxt/image/dist/index.js -> @nuxt/image
 export const normalizeModuleTranspilePath = (p: string) => {
   return getDirectory(p).split('node_modules/').pop() as string
 }
 
 const MissingModuleMatcher = /Cannot find module\s+['"]?([^'")\s]+)['"]?/i
 
+// 输入：
+// 模块名字或模块函数
+// 当前 Nuxt 实例
+//
+// 主要流程：
+// 如果是函数
+//    直接返回（这是已经标准化好的模块）。
+// 如果是字符串
+// 解析路径（支持别名 alias）
+// 解析为绝对路径（file URL）
+// 用 jiti 动态 import 模块
+// 校验模块必须是一个函数
+// 检查有没有 module.json 文件（存版本信息），如果有读出来作为 buildTimeMeta。
+// 异常处理
+// 如果模块加载失败，明确给出错误提示，比如 "模块未安装"。
 export async function loadNuxtModuleInstance (nuxtModule: string | NuxtModule, nuxt: Nuxt = useNuxt()): Promise<{ nuxtModule: NuxtModule<any>, buildTimeModuleMeta: ModuleMeta, resolvedModulePath?: string }> {
   let buildTimeModuleMeta: ModuleMeta = {}
 

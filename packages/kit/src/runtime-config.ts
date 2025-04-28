@@ -7,6 +7,19 @@ import defu from 'defu'
 import { useNuxt } from './context'
 import { useNitro } from './nitro'
 
+// 用于访问和动态更新 Nuxt 的 Runtime Config（运行时配置）的方法集合，并支持环境变量覆盖与动态扩展。
+//
+// 主要负责：
+//
+// 读取最终生效的 runtimeConfig
+//
+// 支持从 process.env 动态覆盖配置
+//
+// 支持字符串中的环境变量动态展开（env expansion）
+//
+// 提供更新 runtimeConfig 的方法
+
+
 /**
  * Access 'resolved' Nuxt runtime configuration, with values updated from environment.
  *

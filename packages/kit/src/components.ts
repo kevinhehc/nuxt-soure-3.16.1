@@ -5,6 +5,10 @@ import { checkNuxtVersion } from './compatibility'
 import { logger } from './logger'
 import { MODE_RE } from './utils'
 
+// 在运行时动态注册组件目录或者单个组件。
+// addComponentsDir(dir) 用来动态添加一个组件目录。
+// addComponent(componentOptions) 用来动态添加一个单独的组件。
+
 /**
  * Register a directory to be scanned for components and imported only when used.
  *

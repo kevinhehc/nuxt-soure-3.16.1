@@ -17,6 +17,9 @@ import { getDirectory } from './module/install'
 import { tryUseNuxt, useNuxt } from './context'
 import { resolveNuxtModule } from './resolve'
 
+// 负责 在构建期间生成模板文件（包括 .ts 类型声明文件）到 .nuxt 目录或虚拟文件系统，
+// 并且 自动维护和生成最终的 tsconfig.json 和 nuxt.d.ts 文件。
+
 /**
  * Renders given template during build into the virtual file system (and optionally to disk in the project `buildDir`)
  */
@@ -155,6 +158,33 @@ export async function updateTemplates (options?: { filter?: (template: ResolvedN
 const EXTENSION_RE = /\b(?:\.d\.[cm]?ts|\.\w+)$/g
 // Exclude bridge alias types to support Volar
 const excludedAlias = [/^@vue\/.*$/, /^#internal\/nuxt/]
+
+// 负责自动生成 tsconfig.json 和 nuxt.d.ts 文件，主要流程是：
+//
+// 收集所有应该包含的源文件（include）
+//
+// 排除不应该扫描的文件夹（exclude）
+//
+// 自动根据模块/别名生成 tsconfig 中的 paths 配置
+//
+// 自动生成 .d.ts 声明引用（/// <reference />）
+//
+// 最后统一输出对象 { tsConfig, declaration }
+//
+// 细节亮点：
+//
+// 兼容 Nuxt2 / Nuxt3
+//
+// 支持未来 .decorators 特性
+//
+// 支持最新 TypeScript 的 "module": "preserve" 配置
+//
+// 根据 Nuxt Layer、Module 动态补充 include/exclude
+//
+// 避免包含 node_modules 里的模块
+//
+// 处理 #build、虚拟路径等特殊情况
+
 export async function _generateTypes (nuxt: Nuxt) {
   const rootDirWithSlash = withTrailingSlash(nuxt.options.rootDir)
   const relativeRootDir = relativeWithDot(nuxt.options.buildDir, nuxt.options.rootDir)

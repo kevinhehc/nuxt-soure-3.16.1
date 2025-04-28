@@ -6,6 +6,17 @@ import { isNuxt2 } from './compatibility'
 import { logger } from './logger'
 import { toArray } from './utils'
 
+// 用于在模块或插件开发时动态扩展路由、路由规则、以及路由中间件的标准方法。
+//
+// 主要负责：
+//
+// 动态修改或增加 pages 路由
+//
+// 动态修改路由规则 (Route Rules)
+//
+// 动态添加中间件 (Middleware)
+
+
 export function extendPages (cb: NuxtHooks['pages:extend']) {
   const nuxt = useNuxt()
   if (isNuxt2(nuxt)) {

@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url'
 import type { JSValue } from 'untyped'
 import { applyDefaults } from 'untyped'
 import type { ConfigLayer, ConfigLayerMeta, LoadConfigOptions } from 'c12'
+// 用 c12 库从磁盘加载 nuxt.config.ts, .nuxtrc 等文件
 import { loadConfig } from 'c12'
 import type { NuxtConfig, NuxtOptions } from '@nuxt/schema'
 import { globby } from 'globby'
@@ -17,8 +18,19 @@ export interface LoadNuxtConfigOptions extends Omit<LoadConfigOptions<NuxtConfig
   overrides?: Exclude<LoadConfigOptions<NuxtConfig>['overrides'], Promise<any> | Function>
 }
 
+// 加载、合并、规范化完整的 Nuxt 配置 (nuxt.config.ts)，包括多层 Layer 配置，返回最终的 NuxtOptions 对象。
+// 步骤	                      做了什么
+// 1. globby('layers/*')	    自动检测本地 layers/ 目录下的子文件夹，作为 Layer
+// 2. loadConfig()	          用 c12 库从磁盘加载 nuxt.config.ts, .nuxtrc 等文件
+// 3. 设定默认 rootDir, alias	如果没手动设定，推断合理的默认值
+// 4. 处理 buildDir	          在 Nuxt 4 兼容模式下，自动切换到 node_modules/.cache/nuxt/.nuxt 作为构建目录
+// 5. 加载配置 schema	        调用 loadNuxtSchema() 动态加载 @nuxt/schema 提供的配置校验规则
+// 6. 遍历所有 Layer	          对每个 Layer 应用默认值、过滤无效 Layer、生成 alias、生成 layer meta 信息
+// 7. 整理出最终 Layers 列表	  保存到 nuxtOptions._layers 供后续使用
+// 8. 最后应用 schema 默认值	  返回标准化后的 NuxtOptions，供 Nuxt 内核继续用
 export async function loadNuxtConfig (opts: LoadNuxtConfigOptions): Promise<NuxtOptions> {
   // Automatically detect and import layers from `~~/layers/` directory
+  // 自动检测本地 layers/ 目录下的子文件夹，作为 Layer
   const localLayers = await globby('layers/*', { onlyDirectories: true, cwd: opts.cwd || process.cwd() })
   opts.overrides = defu(opts.overrides, { _extends: localLayers });
 
@@ -108,6 +120,9 @@ export async function loadNuxtConfig (opts: LoadNuxtConfigOptions): Promise<Nuxt
   return await applyDefaults(NuxtConfigSchema, nuxtConfig as NuxtConfig & Record<string, JSValue>) as unknown as NuxtOptions
 }
 
+// 根据当前目录，尝试找到并动态导入 @nuxt/schema 包。
+// 里面定义了 NuxtConfigSchema，告诉你哪些字段是合法配置、默认值是多少。
+// 如果找不到 @nuxt/schema，会尝试找 nuxt 或 nuxt-nightly。
 async function loadNuxtSchema (cwd: string) {
   const url = directoryToURL(cwd)
   const urls = [url]
