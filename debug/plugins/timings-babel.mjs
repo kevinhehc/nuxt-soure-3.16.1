@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { declare } from '@babel/helper-plugin-utils'
 import { types as t } from '@babel/core'
 
+// 它是一个 Babel 插件，用来在构建期间自动插桩 (Instrumentation)，
+// 帮助 收集每个函数的调用次数、执行耗时、调用来源，最终生成一份详细的函数性能分析报告！
+
 const metricsPath = fileURLToPath(new URL('../../debug-timings.json', import.meta.url))
 
 // inlined from https://github.com/danielroe/errx

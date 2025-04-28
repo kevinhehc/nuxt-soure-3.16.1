@@ -6,6 +6,7 @@ import type { BuildOptions } from 'unbuild'
 
 import { AnnotateFunctionTimingsPlugin } from './plugins/timings-unbuild'
 
+// 根据配置决定是否起效
 export const stubOptions = {
   jiti: {
     transformOptions: {

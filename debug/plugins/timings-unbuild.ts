@@ -19,6 +19,10 @@ declare global {
   var ____writeFileSync: typeof import('fs').writeFileSync
 }
 
+// 在构建期间自动扫描所有 .ts / .js 源代码文件，
+// 给每个函数加上计时和调用次数记录代码，
+// 让程序运行时可以统计出各个函数的执行时间、调用次数和调用链，
+// 最后在进程退出时输出性能分析结果。
 export function AnnotateFunctionTimingsPlugin () {
   return {
     name: 'timings',
