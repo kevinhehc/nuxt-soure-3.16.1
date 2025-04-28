@@ -38,9 +38,11 @@ export async function buildServer (ctx: ViteBuildContext) {
           return { relative: true }
         }
         if (type === 'public') {
+          // public 类型
           return { runtime: `${helper}__publicAssetsURL(${JSON.stringify(filename)})` }
         }
         if (type === 'asset') {
+          // asset 类型
           const relativeFilename = filename.replace(withTrailingSlash(withoutLeadingSlash(ctx.nuxt.options.app.buildAssetsDir)), '')
           return { runtime: `${helper}__buildAssetsURL(${JSON.stringify(relativeFilename)})` }
         }

@@ -69,6 +69,15 @@ export async function buildClient (ctx: ViteBuildContext) {
           // In CSS we only use relative paths until we craft a clever runtime CSS hack
           return { relative: true }
         }
+
+
+        //  阶段	         发生了什么和负责的地方
+        // 1. 解析	       你在代码里写了 import logo from '@/assets/logo.png'
+        // 2. 依赖收集	   Vite 发现这是个静态资源，它根据配置（比如 assetsInclude）去处理
+        // 3. 插占位符	   Vite 在 开发模式 或 构建预处理阶段，把资源替换成一个特殊占位符，比如 __VITE_ASSET__logo_abcd1234_png	Vite 核心源码，特别是 vite/src/node/plugins/asset.ts
+        // 4. 后期替换	   真正打包的时候，Vite 再把占位符换成实际的 URL，比如 /assets/logo.abcd1234.png
+        // 5. 检测	       在你看到的 RuntimePathsPlugin 里，VITE_ASSET_RE 用来检测代码中有没有这种占位符
+        // 路径的修改
         return { runtime: `globalThis.__publicAssetsURL(${JSON.stringify(filename)})` }
       },
     },

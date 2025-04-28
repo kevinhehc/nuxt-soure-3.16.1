@@ -34,6 +34,7 @@ export const LayerAliasingPlugin = (options: LayerAliasingOptions) => createUnpl
     const rootDir = layer.config.rootDir || layer.cwd // 当前层的根目录
 
     // 给每个 srcDir 设置其路径别名对应的实际路径（如 ~ -> srcDir, ~~ -> rootDir）
+    // @~ 等 alias 的处理
     aliases[srcDir] = {
       '~': layer.config?.alias?.['~'] || srcDir,
       '@': layer.config?.alias?.['@'] || srcDir,
