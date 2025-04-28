@@ -7,6 +7,24 @@ interface DevStyleSSRPluginOptions {
   buildAssetsURL: string
 }
 
+// 为什么 Vite 原生没有？
+// Vite 的设计里，在开发模式 (dev) 时的 SSR，只保证了模块能返回 export 出来的内容，比如：
+// export default { foo: 'bar' }
+// export const bar = 'baz'
+// 但是 CSS 是通过 <link> 标签在客户端热更新处理的，
+// 并不会在服务器返回 HTML 时注入 CSS 内容。
+//
+// 因为：
+//
+// Vite 本来就是前端优先（client-side first）的工具。
+// Vite 在 Dev 模式下假设你的页面是 "客户端 JS 接管"。
+// 正式的 CSS 集成是在 build 阶段，通过 Rollup 插件 vite:css 完成的。
+//
+// 而 Nuxt 作为 SSR 框架，需要：
+// 服务端也要带着样式渲染（不然页面就白屏、闪烁、样式丢失）。
+// 所以必须开发自己的一套逻辑来 "Dev SSR 注入 CSS"。
+// 于是，Nuxt搞出了 DevStyleSSRPlugin。
+
 // 开发模式下用于处理 CSS 热更新的 Vite 插件
 // 为了在开发阶段进行 SSR（服务端渲染）时，避免重复的 CSS 样式注入，提升热重载体验。
 export function DevStyleSSRPlugin (options: DevStyleSSRPluginOptions): Plugin {

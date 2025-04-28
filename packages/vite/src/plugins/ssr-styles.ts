@@ -26,6 +26,20 @@ interface SSRStylePluginOptions {
 const SUPPORTED_FILES_RE = /\.(?:vue|(?:[cm]?j|t)sx?)$/
 
 // 定义插件函数
+// 在 Nuxt 3 开发模式下（dev + ssr: true），
+// 收集服务器渲染过程中用到的 CSS，
+// 并且在返回的 SSR HTML 里 动态插入 <link> 标签，
+// 这样服务器渲染出来的页面也有完整的 CSS 样式。
+
+// 可以总结成这样：
+// 在服务器处理请求时（renderToString），
+// ssrStylesPlugin 分析当前页面用到了哪些 CSS 模块，
+// 把这些 CSS 的 URL 记录下来，
+// 在最终生成的 SSR HTML 里面，
+// 插入对应的 <link rel="stylesheet" href="..."> 标签。
+// 这样，浏览器收到的 HTML 页面就已经有完整样式了！
+// 页面不会白屏！
+// 样式即时生效！
 export function ssrStylesPlugin (options: SSRStylePluginOptions): Plugin {
   // 记录每个模块的 CSS 引用
   const cssMap: Record<string, { files: string[], inBundle?: boolean }> = {}

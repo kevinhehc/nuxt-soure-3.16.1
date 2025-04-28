@@ -6,6 +6,16 @@ import type { Plugin as VitePlugin } from 'vite'
 
 // 用于 保留并导出源码映射（source maps） 的插件逻辑
 // 目的是在构建时导出 .map 文件并在运行时正确加载
+
+// 帮助在多次修改代码时，正确地“叠加”维护 SourceMap，不丢失原有映射。
+//
+// 尤其是当：
+// 一个文件被多个 Vite 插件或工具链修改，
+// 每次修改都要更新一份新的 SourceMap，
+// 如果没有正确地合并 SourceMap，最终调试时，
+// 浏览器里的行号、列号、错误提示都会对不上真实源代码！
+// 所以 createSourcemapPreserver 就是专门做这个事情的：
+// 帮你在多轮 transform 后，正确维护完整的 SourceMap。
 export const createSourcemapPreserver = () => {
   // 用于保存 Vite 构建输出目录的路径
   let outputDir: string

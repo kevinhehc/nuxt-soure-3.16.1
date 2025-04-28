@@ -29,6 +29,11 @@ interface VitePublicDirsPluginOptions {
   baseURL?: string
 }
 
+// 为什么需要自己写一个 VitePublicDirsPlugin？因为：
+
+// Vite             官方	                              Nuxt 3
+// public/ 目录处理	默认只有单个 public/（项目根目录）	  支持多个 public 目录（模块扩展、layer扩展，可以合并多个 public）
+// 热更新支持？	      ❌ 不监听 public 目录变化	          ✅ VitePublicDirsPlugin 在 dev 模式下监听 public 目录的变化（新文件自动可访问）
 export const VitePublicDirsPlugin = createUnplugin((options: VitePublicDirsPluginOptions) => {
   const { resolveFromPublicAssets } = useResolveFromPublicAssets()
 
