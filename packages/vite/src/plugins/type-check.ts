@@ -1,6 +1,16 @@
 import MagicString from 'magic-string' // 导入 MagicString，这是一个用于字符串修改的库，能够保留源码映射
 import type { Plugin } from 'vite' // 从 vite 包中引入 Plugin 类型，用于定义插件的结构
 
+
+// 在 Vite 里，默认 只有编译（transform）TS文件，不会主动去跑 TypeScript 的完整类型检查。
+// Vite只负责让代码能快速在浏览器跑起来，不关心类型错误。
+// 但是：对于 Nuxt 这种大型项目、多人开发项目，类型出错是非常重要的风险！
+// 比如组件 props 错了、API 调用参数错了，跑到运行时才报错，太晚了。
+// 要在保存代码时、开发过程中，立刻看到类型错误！
+// 所以 Nuxt 加了自己的 TypeCheckPlugin，
+// 在 Vite 启动 dev server 时，后台开一个 TypeScript 类型检查的子进程，
+// 自动帮你做 Type Checking，发现问题马上提示！
+
 // 定义一个正则表达式，用于匹配 URL 中的查询参数部分，例如 "?v=1.0"
 const QUERY_RE = /\?.+$/
 
