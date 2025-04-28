@@ -108,6 +108,7 @@ function getManifest (ctx: ViteBuildContext) {
 }
 
 // 创建处理 SSR 模块请求的 App 应用
+// 创建一个http服务器
 function createViteNodeApp (ctx: ViteBuildContext, invalidates: Set<string> = new Set()) {
   // 创建 h3 应用
   const app = createApp()
@@ -189,6 +190,8 @@ export type ViteNodeServerOptions = {
   base: string
 }
 
+// dev环境下是这种数据
+// build模式下是真实的数据，而非二次跳转的形式
 export async function initViteNodeServer (ctx: ViteBuildContext) {
   // Serialize and pass vite-node runtime options
   // 构建并序列化 vite-node 的配置，供后续 SSR 使用

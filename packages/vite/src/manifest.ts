@@ -43,6 +43,7 @@ export async function writeManifest (ctx: ViteBuildContext, css: string[] = []) 
   }
 
   // 获取实际的 client manifest
+  // 这里会判断
   // 如果是开发环境，使用上面的临时 manifest；
   // 如果是生产环境，从 dist/client/manifest.json 中读取实际构建生成的 manifest。
   const manifestFile = resolve(clientDist, 'manifest.json')
