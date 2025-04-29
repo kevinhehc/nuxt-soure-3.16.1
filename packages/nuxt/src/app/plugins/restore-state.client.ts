@@ -1,6 +1,8 @@
 import destr from 'destr'
 import { defineNuxtPlugin, useNuxtApp } from '../nuxt'
 
+// 更新nuxt的存储在 sessionStorage 的状态
+
 export default defineNuxtPlugin({
   name: 'nuxt:restore-state',
   hooks: {

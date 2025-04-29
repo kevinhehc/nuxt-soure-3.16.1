@@ -9,6 +9,8 @@ import { defineNuxtPlugin } from '../nuxt'
 // @ts-expect-error virtual file
 import { devLogs, devRootDir } from '#build/nuxt.config.mjs'
 
+// 日志相关
+
 const devRevivers: Record<string, (data: any) => any> = import.meta.server
   ? {}
   : {

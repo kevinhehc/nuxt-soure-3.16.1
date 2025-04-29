@@ -1,5 +1,7 @@
 import { defineNuxtPlugin } from '../nuxt'
 
+// 性能检测
+
 export default defineNuxtPlugin({
   name: 'nuxt:browser-devtools-timing',
   enforce: 'pre',

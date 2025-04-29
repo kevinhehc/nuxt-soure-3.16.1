@@ -3,6 +3,8 @@ import { defineNuxtPlugin } from '../nuxt'
 import { onNuxtReady } from '../composables/ready'
 import { useError } from '../composables/error'
 
+// layout没使用的检测
+
 // @ts-expect-error virtual file
 import layouts from '#build/layouts'
 

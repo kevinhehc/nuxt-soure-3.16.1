@@ -1,6 +1,8 @@
 import type { UseHeadInput } from '@unhead/vue/types'
 import type { NuxtApp, useNuxtApp } from '../nuxt.js'
 
+// type
+
 declare global {
   namespace NodeJS {
     interface Process {

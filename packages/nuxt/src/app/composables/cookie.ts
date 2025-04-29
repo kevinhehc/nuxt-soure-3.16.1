@@ -10,6 +10,8 @@ import { klona } from 'klona'
 import { useNuxtApp } from '../nuxt'
 import { useRequestEvent } from './ssr'
 
+// 目前没用到cookie
+
 // @ts-expect-error virtual import
 import { cookieStore } from '#build/nuxt.config.mjs'
 

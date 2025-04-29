@@ -6,6 +6,8 @@ import { useNuxtApp } from '../nuxt'
 import type { NuxtPayload } from '../nuxt'
 import { useRouter } from './router'
 
+// error
+
 // @ts-expect-error virtual file
 import { nuxtDefaultErrorValue } from '#build/nuxt.config.mjs'
 

@@ -174,6 +174,7 @@ interface _NuxtApp {
   // Nuxt injections
   $config: RuntimeConfig
 
+  // 客户端也会出来nuxt?
   isHydrating?: boolean
   deferHydration: () => () => void | Promise<void>
 
