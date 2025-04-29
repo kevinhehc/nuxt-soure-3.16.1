@@ -19,7 +19,7 @@ export function useState<T> (...args: any): Ref<T> {
   //定义 useState，接收任意数量的参数。
   // 返回类型是 Vue 的 Ref<T> —— 响应式的引用对象。
 
-  // 如果最后一个参数是字符串（key），取出来当 autoKey。
+  // 如果最后一个参数是字符串（key），取出来当 autoKey 。
   // 支持灵活的参数顺序：useState(key, init) 或 useState(init, key) 都可以。
   const autoKey = typeof args[args.length - 1] === 'string' ? args.pop() : undefined
 

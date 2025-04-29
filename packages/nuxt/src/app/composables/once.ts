@@ -1,5 +1,6 @@
 import { useNuxtApp } from '../nuxt'
 
+
 type CallOnceOptions = {
   mode?: 'navigation' // 只在路由跳转（页面变化）时，触发一次。
     | 'render' // 只在当前组件的每次渲染时，触发一次。

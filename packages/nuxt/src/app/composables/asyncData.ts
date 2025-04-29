@@ -30,7 +30,7 @@ import type { MultiWatchSources, Ref } from 'vue'
 //         ↓
 // 【如果 import.meta.server】
 //     【服务器端执行】
-//       - immediate: true？→ serverPrefetch + promise
+//       - immediate: true？→ serverPrefetch +  promise
 //         ↓
 // 【如果 import.meta.client】
 //     【客户端执行】

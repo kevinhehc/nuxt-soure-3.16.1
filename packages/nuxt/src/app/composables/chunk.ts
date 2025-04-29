@@ -1,7 +1,7 @@
 import destr from 'destr'
 import { useNuxtApp } from '../nuxt'
 
-// reloadNuxtApp 可以接受的配置参数。
+//  reloadNuxtApp 可以接受的配置参数。
 export interface ReloadNuxtAppOptions {
   /**
    * Number of milliseconds in which to ignore future reload requests

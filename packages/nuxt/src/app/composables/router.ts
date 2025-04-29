@@ -13,10 +13,14 @@ import { createError, showError } from './error'
 
 /** @since 3.0.0 */
 export const useRouter: typeof _useRouter = () => {
+  // 返回 $router 实例（内部自己模拟了 vue-router 的 API）
   return useNuxtApp()?.$router as Router
 }
 
 /** @since 3.0.0 */
+// 返回当前 Route 对象。
+// 在 middleware 中直接用 to/from 更准确。
+// 基础路由对象访问。
 export const useRoute: typeof _useRoute = () => {
   if (import.meta.dev && !getCurrentInstance() && isProcessingMiddleware()) {
     console.warn('[nuxt] Calling `useRoute` within middleware may lead to misleading results. Instead, use the (to, from) arguments passed to the middleware to access the new and old routes.')
@@ -28,6 +32,8 @@ export const useRoute: typeof _useRoute = () => {
 }
 
 /** @since 3.0.0 */
+// 类似 vue-router 的 onBeforeRouteLeave
+// 只在目标不同的情况下触发。
 export const onBeforeRouteLeave = (guard: NavigationGuard) => {
   const unsubscribe = useRouter().beforeEach((to, from, next) => {
     if (to === from) { return }
@@ -37,6 +43,8 @@ export const onBeforeRouteLeave = (guard: NavigationGuard) => {
 }
 
 /** @since 3.0.0 */
+// 每次导航变化就触发。
+// 组件内方便处理路由变化。
 export const onBeforeRouteUpdate = (guard: NavigationGuard) => {
   const unsubscribe = useRouter().beforeEach(guard)
   onScopeDispose(unsubscribe)
@@ -48,6 +56,7 @@ export interface RouteMiddleware {
 
 /** @since 3.0.0 */
 /* @__NO_SIDE_EFFECTS__ */
+// 定义一个中间件函数。
 export function defineNuxtRouteMiddleware (middleware: RouteMiddleware) {
   return middleware
 }
@@ -62,6 +71,10 @@ interface AddRouteMiddleware {
 }
 
 /** @since 3.0.0 */
+// 注册一个中间件：
+// 匿名 = 全局中间件
+// 有名字 = 命名中间件
+// 支持全局 / 命名中间件注册
 export const addRouteMiddleware: AddRouteMiddleware = (name: string | RouteMiddleware, middleware?: RouteMiddleware, options: AddRouteMiddlewareOptions = {}) => {
   const nuxtApp = useNuxtApp()
   const global = options.global || typeof name !== 'string'
@@ -116,6 +129,13 @@ export interface NavigateToOptions {
 
 const URL_QUOTE_RE = /"/g
 /** @since 3.0.0 */
+// 支持普通内部跳转 (router.push/replace)
+// 支持打开新窗口 (window.open)
+// 支持外部链接跳转 (location.href)
+// 支持服务端跳转（写入 302 Response）
+// 支持 Middleware 中的特殊处理。
+// 完整流程控制，非常强大！
+// Nuxt 应用页面跳转统一入口！
 export const navigateTo = (to: RouteLocationRaw | undefined | null, options?: NavigateToOptions): Promise<void | NavigationFailure | false> | false | void | RouteLocationRaw => {
   to ||= '/'
 
@@ -227,6 +247,10 @@ export const navigateTo = (to: RouteLocationRaw | undefined | null, options?: Na
  * This will abort navigation within a Nuxt route middleware handler.
  * @since 3.0.0
  */
+// 在中间件中使用。
+// 中断导航，并可以抛出一个 Error。
+// 错误可以直接 showError 也可以作为 4xx/5xx 响应。
+// 优雅中断导航并错误处理。
 export const abortNavigation = (err?: string | Partial<NuxtError>) => {
   if (import.meta.dev && !isProcessingMiddleware()) {
     throw new Error('abortNavigation() is only usable inside a route middleware handler.')
@@ -244,6 +268,10 @@ export const abortNavigation = (err?: string | Partial<NuxtError>) => {
 }
 
 /** @since 3.0.0 */
+// 可以动态设置本页使用的布局。
+// 处理不同阶段（server/client/hydration）的特殊情况。
+// 如果是在 Middleware/Server 阶段，会提前注入 meta。
+// 灵活按需切换 Layout，比如博客详情页用单栏，首页用双栏。
 export const setPageLayout = (layout: unknown extends PageMeta['layout'] ? string : PageMeta['layout']) => {
   const nuxtApp = useNuxtApp()
   if (import.meta.server) {
@@ -270,6 +298,7 @@ export const setPageLayout = (layout: unknown extends PageMeta['layout'] ? strin
 /**
  * @internal
  */
+// resolveRouteObject()：拼接 path/query/hash 成完整 URL 字符串。
 export function resolveRouteObject (to: Exclude<RouteLocationRaw, string>) {
   return withQuery(to.path || '', to.query || {}) + (to.hash || '')
 }
@@ -277,6 +306,7 @@ export function resolveRouteObject (to: Exclude<RouteLocationRaw, string>) {
 /**
  * @internal
  */
+// encodeURL()：正确处理外链的 URL。
 export function encodeURL (location: string, isExternalHost = false) {
   const url = new URL(location, 'http://localhost')
   if (!isExternalHost) {

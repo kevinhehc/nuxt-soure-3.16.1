@@ -8,7 +8,7 @@ import { useAsyncData } from './asyncData'
 import { useRoute } from './router'
 import { createError } from './error'
 
-// 给每个经过 defineNuxtComponent 包装过的组件打一个标记：__nuxt_component = true。
+//  给每个经过 defineNuxtComponent 包装过的组件打一个标记：__nuxt_component = true。
 // **用途：**后续在运行时可以识别哪些组件是 Nuxt 组件，而不是普通 Vue 组件。
 export const NuxtComponentIndicator = '__nuxt_component'
 

@@ -9,7 +9,7 @@ export function useRequestURL (opts?: Parameters<typeof getRequestURL>[1]) {
     // 调用 useRequestEvent() 拿到当前请求的 RequestEvent（服务器请求上下文）。
     // 再用 getRequestURL() 生成完整 URL。
     //
-    // 特点：
+    // 特点 ：
     // 服务器端没有 window.location，必须根据请求头自己拼 URL。
     // getRequestURL 会自动处理 x-forwarded-host、basePath 等反向代理情况。
     return getRequestURL(useRequestEvent()!, opts)

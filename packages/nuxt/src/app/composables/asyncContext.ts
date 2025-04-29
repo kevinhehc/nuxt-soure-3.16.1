@@ -4,7 +4,7 @@ import { getCurrentInstance, withAsyncContext as withVueAsyncContext } from 'vue
 /** @since 3.8.0 */
 // 定义并导出一个函数 withAsyncContext。
 // 它接受一个参数 fn，要求是一个返回 Promise 的函数（也就是异步函数）
-// 这个 fn 是你想在某种「上下文」中执行的异步逻辑。
+//  这个 fn 是你想在某种「上下文」中执行的异步逻辑。
 //
 // withVueAsyncContext 是 Vue 3 的内部工具（在 Nuxt 中也有自己的封装）。
 // 它的作用是：在执行一个异步函数时，保留当前组件实例的上下文（Context），比如 provide/inject、currentInstance 等。

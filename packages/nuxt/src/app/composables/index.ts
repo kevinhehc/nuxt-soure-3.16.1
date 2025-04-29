@@ -1,3 +1,4 @@
+// 无实际逻辑
 export { defineNuxtComponent } from './component'
 export { useAsyncData, useLazyAsyncData, useNuxtData, refreshNuxtData, clearNuxtData } from './asyncData'
 export type { AsyncDataOptions, AsyncData, AsyncDataRequestStatus } from './asyncData'
