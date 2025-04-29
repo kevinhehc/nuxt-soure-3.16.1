@@ -28,6 +28,31 @@ const STARTER_DOT_RE = /^\./g
 
 export type getComponentsT = (mode?: 'client' | 'server' | 'all') => Component[]
 
+// 模块自动扫描项目中的组件目录，根据模式（client/server/all）分类组件，注册各种编译期插件，实现：
+// 能力	简介
+// 自动组件导入	无需手动 import，使用组件即自动引入
+// 支持组件模式	client-only、server-only、通用组件（mode: client/server/all）
+// islands 架构支持	局部 SSR / CSR 渲染块（NuxtIsland）
+// lazy hydration	延迟挂载组件：idle、visible、click 等策略
+// 组件 chunk 分离	每个 client-only 组件打成独立 chunk，实现按需加载
+// 热重载支持	server-only 组件 HMR 支持
+// 自动生成 TS 类型定义	支持 components.d.ts 自动类型提示
+
+// Transform 插件注入
+// addBuildPlugin(TransformPlugin(...))
+// addBuildPlugin(LoaderPlugin(...))
+// addBuildPlugin(LazyHydrationTransformPlugin(...))
+// addBuildPlugin(IslandsTransformPlugin(...))
+// addBuildPlugin(TreeShakeTemplatePlugin(...))
+// 这些插件在 Vue 文件 transform 阶段执行，处理：
+//
+//
+// 插件	             功能
+// TransformPlugin	分析组件结构、注入运行时信息
+// LoaderPlugin	注册组件 runtime loader，支持延迟导入
+// LazyHydrationTransformPlugin	根据 hydrate-on-* 自动转换组件名
+// IslandsTransformPlugin	转换 slot / nuxt-client 标签为 <NuxtIsland> 结构
+// TreeShakeTemplatePlugin	剔除未在模板中使用的组件，tree-shaking
 export default defineNuxtModule<ComponentsOptions>({
   meta: {
     name: 'nuxt:components',
@@ -171,6 +196,12 @@ export default defineNuxtModule<ComponentsOptions>({
 
     // Scan components and add to plugin
     nuxt.hook('app:templates', async (app) => {
+      // 描 components/、components/global、components/islands 等目录，收集：
+      // 文件路径
+      // 模式（client/server/all）
+      // 组件名称（PascalCase、KebabCase）
+      // 是否全局注册
+      // 这些信息储存在 context.components 中，供后续插件使用。
       const newComponents = await scanComponents(componentDirs, nuxt.options.srcDir!)
       await nuxt.callHook('components:extend', newComponents)
       // add server placeholder for .client components server side. issue: #7085

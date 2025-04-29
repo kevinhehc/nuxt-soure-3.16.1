@@ -20,6 +20,8 @@ interface LoaderOptions {
   experimentalComponentIslands?: boolean
 }
 
+// 根据组件注册信息，动态导入客户端组件，确保在浏览器端按需正确加载每个 client-only 或 lazy 组件。
+
 const REPLACE_COMPONENT_TO_DIRECT_IMPORT_RE = /(?<=[ (])_?resolveComponent\(\s*["'](lazy-|Lazy(?=[A-Z]))?(Idle|Visible|idle-|visible-|Interaction|interaction-|MediaQuery|media-query-|If|if-|Never|never-|Time|time-)?([^'"]*)["'][^)]*\)/g
 export const LoaderPlugin = (options: LoaderOptions) => createUnplugin(() => {
   const exclude = options.transform?.exclude || []

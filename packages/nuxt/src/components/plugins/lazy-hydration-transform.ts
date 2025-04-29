@@ -24,6 +24,44 @@ const hydrationStrategyMap = {
   hydrateNever: 'Never',
 }
 const LAZY_HYDRATION_PROPS_RE = /\bhydrate-?on-?idle|hydrate-?on-?visible|hydrate-?on-?interaction|hydrate-?on-?media-?query|hydrate-?after|hydrate-?when|hydrate-?never\b/
+
+// 在编译 .vue 文件时，根据组件上的 hydrate-* 属性，自动切换成对应延迟挂载的 Lazy 组件版本。
+// 具体来说，它做了两件事：
+// 扫描 <LazyXXX> 组件，如果发现有 hydrate-on-idle、hydrate-on-visible 等属性。
+// 把组件名自动替换成 Lazy+策略名+组件名，例如：<LazyMyComponent> ➔ <LazyIdleMyComponent>。
+// 这样，Nuxt 就可以根据不同策略（如页面可见、空闲时、点击后等）来 延迟挂载这个组件，而不是一开始就挂载，大大提高性能、加快首屏渲染速度。
+
+// 示例 1：hydrate-on-idle
+// 开发者写的 .vue 代码：
+// <template>
+//   <LazyMyComponent hydrate-on-idle />
+// </template>
+//
+// 经过 LazyHydrationTransformPlugin 处理后，自动变成：
+// <template>
+//   <LazyIdleMyComponent hydrate-on-idle />
+// </template>
+//
+// 解释：
+// hydrate-on-idle ➔ 策略是 Idle
+// 所以用 LazyIdleMyComponent，意思是：浏览器空闲时再加载这个组件。
+
+
+// 示例 2：hydrate-on-visible
+// 原始写法：
+// <template>
+//   <LazyChatWidget hydrate-on-visible />
+// </template>
+//
+// 插件转化后：
+// <template>
+//   <LazyVisibleChatWidget hydrate-on-visible />
+// </template>
+//
+// 解释：
+// hydrate-on-visible ➔ 策略是 Visible
+// 意思是：滚动到屏幕看到这个组件的时候再挂载，优化初次加载。
+
 export const LazyHydrationTransformPlugin = (options: LoaderOptions) => createUnplugin(() => {
   const exclude = options.transform?.exclude || []
   const include = options.transform?.include || []

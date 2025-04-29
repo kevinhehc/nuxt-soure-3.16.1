@@ -19,6 +19,30 @@ const SSR_RENDER_RE = /ssrRenderComponent/
 const PLACEHOLDER_EXACT_RE = /^(?:fallback|placeholder)$/
 const CLIENT_ONLY_NAME_RE = /^(?:_unref\()?(?:_component_)?(?:Lazy|lazy_)?(?:client_only|ClientOnly\)?)$/
 
+// 分析 .vue 文件的 <template>，找出没有使用到的组件引用，帮助移除无用组件，提高最终打包后的体积优化（tree shaking）。
+
+// 案例
+
+// 原始 .vue 文件
+// <template>
+//   <div>
+//     <UsedComponent />
+//   </div>
+// </template>
+//
+// <script setup>
+// // 自动引入
+// import UsedComponent from '~/components/UsedComponent.vue'
+// import UnusedComponent from '~/components/UnusedComponent.vue'
+// </script>
+
+
+// 在默认情况下，即使 UnusedComponent 没有出现在 <template> 里，它也可能被引入到 bundle，导致无谓增加包大小。
+// 经过 TreeShakeTemplatePlugin 处理后：
+// 分析 <template>，发现只用到了 UsedComponent。
+// UnusedComponent 被标记为 未使用。
+// 打包时可以完全移除掉 UnusedComponent，不出现在最终的客户端 JS 代码里！
+// 这样打包更小、更快！
 export const TreeShakeTemplatePlugin = (options: TreeShakeTemplatePluginOptions) => createUnplugin(() => {
   const regexpMap = new WeakMap<Component[], [RegExp, RegExp, string[]]>()
   return {

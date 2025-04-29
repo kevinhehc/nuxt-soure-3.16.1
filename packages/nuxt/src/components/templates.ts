@@ -2,12 +2,27 @@ import { isAbsolute, relative } from 'pathe'
 import { genDynamicImport } from 'knitwork'
 import type { NuxtPluginTemplate, NuxtTemplate } from 'nuxt/schema'
 
+// .vue 组件 -> 扫描 -> app.components
+//              ↓
+//         ┌────────────────────────────┐
+//         │ 自动生成 template 文件：   │
+//         │                            │
+//         │ components.plugin.mjs      │ ← 全局注册
+//         │ component-names.mjs        │ ← 名字列表
+//         │ components.islands.mjs     │ ← Island 映射
+//         │ components.d.ts            │ ← TS 类型
+//         │ components.json            │ ← 元数据       │
+//         └────────────────────────────┘
+//              ↓
+//         供 Nuxt runtime / devtools / ts 使用
+
 type ImportMagicCommentsOptions = {
   chunkName: string
   prefetch?: boolean | number
   preload?: boolean | number
 }
 
+// // 生成 webpack magic comments（控制 chunk 名、预加载）
 const createImportMagicComments = (options: ImportMagicCommentsOptions) => {
   const { chunkName, prefetch, preload } = options
   return [
@@ -15,6 +30,7 @@ const createImportMagicComments = (options: ImportMagicCommentsOptions) => {
     prefetch === true || typeof prefetch === 'number' ? `webpackPrefetch: ${prefetch}` : false,
     preload === true || typeof preload === 'number' ? `webpackPreload: ${preload}` : false,
   ].filter(Boolean).join(', ')
+  // => webpackChunkName: "LazyHeader", webpackPreload: true, webpackPrefetch: 0
 }
 
 const emptyComponentsPlugin = `
@@ -24,6 +40,9 @@ export default defineNuxtPlugin({
 })
 `
 
+// 注册全局组件
+// 生成：components.plugin.mjs
+// 自动注册所有 global/sync 组件，无需手动 app.component()。
 export const componentsPluginTemplate: NuxtPluginTemplate = {
   filename: 'components.plugin.mjs',
   getContents ({ app }) {
@@ -61,6 +80,9 @@ export default defineNuxtPlugin({
   },
 }
 
+// 生成组件名称列表
+// 用于开发工具、自动补全、chunk 路径映射。
+// 生成：component-names.mjs
 export const componentNamesTemplate: NuxtTemplate = {
   filename: 'component-names.mjs',
   getContents ({ app }) {
@@ -68,6 +90,9 @@ export const componentNamesTemplate: NuxtTemplate = {
   },
 }
 
+// 生成 islands 映射文件
+// 生成：components.islands.mjs
+// 支持 islands 架构，自动将 .server 组件和 island: true 标记的组件做成 服务端异步组件，用于
 export const componentsIslandsTemplate: NuxtTemplate = {
   // components.islands.mjs'
   getContents ({ app, nuxt }) {
@@ -103,6 +128,10 @@ export const componentsIslandsTemplate: NuxtTemplate = {
 }
 
 const NON_VUE_RE = /\b\.(?!vue)\w+$/g
+// 生成 TypeScript 类型
+// 生成：components.d.ts
+// 提供全局组件类型定义、lazy 组件支持、island 类型支持。
+// 示例：在组件中使用自动导入时，TS 会自动提示组件类型。
 export const componentsTypeTemplate = {
   filename: 'components.d.ts' as const,
   getContents: ({ app, nuxt }) => {
@@ -147,6 +176,7 @@ export const componentNames: string[]
   },
 } satisfies NuxtTemplate
 
+// 用于开发工具、调试器（如 Nuxt DevTools）读取组件状态。
 export const componentsMetadataTemplate: NuxtTemplate = {
   filename: 'components.json',
   write: true,

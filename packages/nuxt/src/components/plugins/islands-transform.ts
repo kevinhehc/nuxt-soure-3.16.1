@@ -10,6 +10,57 @@ import { resolvePath } from '@nuxt/kit'
 import defu from 'defu'
 import { isVue } from '../../core/utils'
 
+// IslandsTransformPlugin 负责在 .vue 文件中，将 slot 和 带 nuxt-client 属性的元素，自动包裹成特定的 Nuxt 组件，以支持 islands architecture（岛屿架构，小块 SSR+CSR 混合渲染）。
+
+
+// 示例 1：处理 <slot>
+// 原始写法：
+// <template>
+//   <div>
+//     <slot name="footer" />
+//   </div>
+// </template>
+// 经过 IslandsTransformPlugin 处理后，变成：
+// <template>
+//   <div>
+//     <NuxtTeleportSsrSlot name="footer" :props="undefined">
+//       <slot name="footer" />
+//       <template #fallback>
+//         <!-- fallback内容（如果有） -->
+//       </template>
+//     </NuxtTeleportSsrSlot>
+//   </div>
+// </template>
+//
+// 解释：
+// <slot> 不直接渲染了。
+// 被包在 <NuxtTeleportSsrSlot> 里面，用来在服务端/客户端同步管理 slot 的渲染。
+// 如果 slot 里面有 v-for，还会加包装 <div v-for> 来保证循环的正确性。
+
+
+
+// 示例 2：处理带 nuxt-client 属性的元素
+// 原始写法：
+// <template>
+//   <div>
+//     <FormWizard nuxt-client />
+//   </div>
+// </template>
+// 插件处理后变成：
+// <template>
+//   <div>
+//     <NuxtTeleportIslandComponent :nuxt-client="true">
+//       <FormWizard />
+//     </NuxtTeleportIslandComponent>
+//   </div>
+// </template>
+//
+// 解释：
+// 检测到 FormWizard 上有 nuxt-client。
+// 自动用 <NuxtTeleportIslandComponent> 包裹。
+// 这样这个 FormWizard 只会在浏览器端动态挂载，而不会一开始就出现在服务器渲染内容里。
+
+
 interface ServerOnlyComponentTransformPluginOptions {
   getComponents: () => Component[]
   /**
@@ -23,6 +74,12 @@ interface ComponentChunkOptions {
   buildDir: string
 }
 
+// SCRIPT_RE：匹配 <script> 标签。
+// HAS_SLOT_OR_CLIENT_RE：检查是否有 <slot> 或 nuxt-client 属性。
+// TEMPLATE_RE：提取 <template> ... </template> 部分。
+// NUXTCLIENT_ATTR_RE：提取 nuxt-client 属性。
+// EXTRACTED_ATTRS_RE：提取 v-if, v-else-if, v-else 条件指令。
+// KEY_RE：提取 key="xxx"，因为在转移 slot 的时候 key 要特殊处理。
 const SCRIPT_RE = /<script[^>]*>/gi
 const HAS_SLOT_OR_CLIENT_RE = /<slot[^>]*>|nuxt-client/
 const TEMPLATE_RE = /<template>([\s\S]*)<\/template>/
@@ -31,16 +88,21 @@ const IMPORT_CODE = '\nimport { mergeProps as __mergeProps } from \'vue\'' + '\n
 const EXTRACTED_ATTRS_RE = /v-(?:if|else-if|else)(="[^"]*")?/g
 const KEY_RE = /:?key="[^"]"/g
 
+// 包一层 <div>，用于支持 v-for 并保持 display: contents（不破坏布局）。
 function wrapWithVForDiv (code: string, vfor: string): string {
   return `<div v-for="${vfor}" style="display: contents;">${code}</div>`
 }
 
+// 处理 .vue 文件中带 <slot> 或 nuxt-client 的情况，改写模板，让组件支持 islands (小块SSR/CSR混合渲染)。
 export const IslandsTransformPlugin = (options: ServerOnlyComponentTransformPluginOptions) => createUnplugin((_options, meta) => {
   const isVite = meta.framework === 'vite'
   return {
     name: 'nuxt:server-only-component-transform',
     enforce: 'pre',
     transformInclude (id) {
+      // 只处理 .vue 文件。
+      // 如果是 Vite 且 selectiveClient 是 deep，直接处理所有 Vue 文件。
+      // 否则只处理属于 islands（island = 小SSR单元，或者 server-only 组件没有 client 版）
       if (!isVue(id)) { return false }
       if (isVite && options.selectiveClient === 'deep') { return true }
       const components = options.getComponents()
@@ -52,12 +114,16 @@ export const IslandsTransformPlugin = (options: ServerOnlyComponentTransformPlug
       return islands.some(c => c.filePath === pathname)
     },
     async transform (code, id) {
+      // 只处理有 <slot> 或 nuxt-client 的文件。
+      // 提取出 <template> 部分。
+      // 用 MagicString 开始代码变更。
       if (!HAS_SLOT_OR_CLIENT_RE.test(code)) { return }
       const template = code.match(TEMPLATE_RE)
       if (!template) { return }
       const startingIndex = template.index || 0
       const s = new MagicString(code)
 
+      // 如果 <script> 不存在，就插入 import 代码，否则在 <script> 中追加导入。
       if (!code.match(SCRIPT_RE)) {
         s.prepend('<script setup>' + IMPORT_CODE + '</script>')
       } else {
@@ -176,7 +242,23 @@ function getPropsToString (bindings: Record<string, string>): string {
   }
 }
 
+// 在 Nuxt 打包阶段，把所有 client 或 all 模式的组件，单独打成独立的 JavaScript chunk，并生成一个路径映射表。
+// 功能	说明	为什么要做
+// 1	把每个 mode: 'client' 或 mode: 'all' 的组件，设成 Rollup/Vite 的独立 entry	这样每个组件都会单独打一个小包，不混在主 bundle 里
+// 2	在 generateBundle 时，收集打包后每个组件对应的 chunk 文件路径	用于后续动态按需加载
+// 3	写一个 components-chunk.mjs 文件，导出 {组件名: 文件路径} 的对象	供 Nuxt runtime 在客户端需要时动态加载组件
 export const ComponentsChunkPlugin = createUnplugin((options: ComponentChunkOptions) => {
+
+  // 为什么很重要？
+  // 传统打包方式下，所有组件都打进主 bundle，即使某些组件只在客户端用，也会导致：
+  // 首屏下载变慢
+  // 服务器渲染加载无用代码
+  // 而 ComponentsChunkPlugin 实现了真正的：
+  // 按需按场景加载组件（特别是 client-only 组件）
+  // 大大减小初始页面大小
+  // 提升 FCP（First Contentful Paint）性能指标
+  // 尤其配合 IslandsTransformPlugin 和 LazyHydrationTransformPlugin，可以做到 Nuxt 3 的终极优化目标：
+  // "服务器快速渲染，浏览器按需激活" 🔥
   const { buildDir } = options
   return {
     name: 'nuxt:components-chunk',

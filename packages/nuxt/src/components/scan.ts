@@ -20,6 +20,25 @@ const MODE_REPLACEMENT_RE = /(\.(client|server))?(\.global|\.island)*$/
  * @param srcDir src path of your app
  * @returns {Promise} Component found promise
  */
+// 扫描组件
+
+// components/
+//   ↓
+// scanComponents(dirs)
+//   ↓
+//  ┌──────────────┐
+//  │ globby 找文件 │
+//  └──────────────┘
+//   ↓
+//  ┌────────────────────────────────┐
+//  │ 根据文件名 → 获取模式、名字等 │
+//  └────────────────────────────────┘
+//   ↓
+//  ┌──────────────────────┐
+//  │ 处理冲突、去重、排序 │
+//  └──────────────────────┘
+//   ↓
+// 返回 Component[] 数组（用于注册 + 构建 chunk + 懒加载等）
 export async function scanComponents (dirs: ComponentsDir[], srcDir: string): Promise<Component[]> {
   // All scanned components
   const components: Component[] = []
@@ -90,6 +109,11 @@ export async function scanComponents (dirs: ComponentsDir[], srcDir: string): Pr
 
       const island = ISLAND_RE.test(fileName) || dir.island
       const global = GLOBAL_RE.test(fileName) || dir.global
+      // 文件名后缀决定组件加载模式：
+      // .client.vue → mode: 'client'
+      // .server.vue → mode: 'server'
+      // 无后缀 → mode: 'all'
+      // 如果是 island（目录或文件名匹配），则自动设为 mode: 'server' 且 island: true
       const mode = island ? 'server' : (fileName.match(COMPONENT_MODE_RE)?.[1] || 'all') as 'client' | 'server' | 'all'
       fileName = fileName.replace(MODE_REPLACEMENT_RE, '')
 
@@ -101,16 +125,21 @@ export async function scanComponents (dirs: ComponentsDir[], srcDir: string): Pr
       const componentNameSegments = resolveComponentNameSegments(fileName.replace(QUOTE_RE, ''), prefixParts)
       const pascalName = pascalCase(componentNameSegments)
 
+      // if (/^Lazy[A-Z]/.test(pascalName)) {
+      //   logger.warn(...) // 提醒不要自己命名 LazyXxx
+      // }
       if (LAZY_COMPONENT_NAME_REGEX.test(pascalName)) {
         logger.warn(`The component \`${pascalName}\` (in \`${filePath}\`) is using the reserved "Lazy" prefix used for dynamic imports, which may cause it to break at runtime.`)
       }
 
+      // 如果多个组件文件解析成相同的 PascalCase 名，会打印警告并避免冲突。
       if (resolvedNames.has(pascalName + suffix) || resolvedNames.has(pascalName)) {
         warnAboutDuplicateComponent(pascalName, filePath, resolvedNames.get(pascalName) || resolvedNames.get(pascalName + suffix)!)
         continue
       }
       resolvedNames.set(pascalName + suffix, filePath)
 
+      // 生成组件注册名 & chunk 名（用于自动导入和 chunk 映射）。
       const kebabName = kebabCase(componentNameSegments)
       const shortPath = relative(srcDir, filePath)
       const chunkName = 'components/' + kebabName + suffix
@@ -135,6 +164,7 @@ export async function scanComponents (dirs: ComponentsDir[], srcDir: string): Pr
         _scanned: true,
       }
 
+      // 支持用户通过 extendComponent 钩子扩展组件定义。
       if (typeof dir.extendComponent === 'function') {
         component = (await dir.extendComponent(component)) || component
       }
@@ -152,6 +182,7 @@ export async function scanComponents (dirs: ComponentsDir[], srcDir: string): Pr
         const newPriority = component.priority ?? 0
 
         // Replace component if priority is higher
+        // 比如组件来自 layer A vs layer B，设置不同 priority 可控制覆盖顺序。
         if (newPriority > existingPriority) {
           components.splice(components.indexOf(existingComponent), 1, component)
         }
@@ -168,6 +199,18 @@ export async function scanComponents (dirs: ComponentsDir[], srcDir: string): Pr
     scannedPaths.push(dir.path)
   }
 
+  // （每个返回的 Component 对象）
+  //
+  // 字段名	含义
+  // filePath	组件文件路径
+  // pascalName	PascalCase 组件名
+  // kebabName	kebab-case 组件名
+  // mode	加载模式：client / server / all
+  // island	是否 island
+  // global	是否 global 注册
+  // chunkName	webpack chunk 名
+  // shortPath	相对路径
+  // _scanned	是否来自自动扫描
   return components
 }
 

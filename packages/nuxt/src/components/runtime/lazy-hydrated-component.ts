@@ -2,6 +2,8 @@ import { defineAsyncComponent, defineComponent, h, hydrateOnIdle, hydrateOnInter
 import type { AsyncComponentLoader, ComponentObjectPropsOptions, ExtractPropTypes, HydrationStrategy } from 'vue'
 import { useNuxtApp } from '#app/nuxt'
 
+// 传入组件支持的 props，比如 hydrateOnIdle
+// 传入一个函数，用来定义何时 hydrate
 function defineLazyComponent<P extends ComponentObjectPropsOptions> (props: P, defineStrategy: (props: ExtractPropTypes<P>) => HydrationStrategy | undefined) {
   return (id: string, loader: AsyncComponentLoader) => defineComponent({
     inheritAttrs: false,
@@ -26,6 +28,15 @@ function defineLazyComponent<P extends ComponentObjectPropsOptions> (props: P, d
     },
   })
 }
+
+// 组件工厂函数	实例组件标签	挂载时机	使用场景
+// createLazyIdleComponent	<LazyIdleChart hydrate-on-idle />	浏览器空闲时（IdleCallback）	图表、广告等低优先级内容
+// createLazyVisibleComponent	<LazyVisiblePromo hydrate-on-visible />	元素进入视口时（IntersectionObserver）	页面底部 CTA、折叠块
+// createLazyInteractionComponent	<LazyInteractionLogin hydrate-on-interaction="click" />	用户点击、悬停或聚焦时	弹窗、表单、选项卡等
+// createLazyMediaQueryComponent	<LazyMediaQuery3D hydrate-on-media-query="(min-width: 1024px)" />	CSS media query 匹配时	桌面/移动设备专用组件
+// createLazyIfComponent	<LazyIfSidebar :hydrate-when="showSidebar" />	某个布尔变量变为 true 时	条件内容，如搜索结果
+// createLazyTimeComponent	<LazyTimeBanner :hydrate-after="5000" />	等待 X 毫秒后触发	延迟显示的动画、提示
+// createLazyNeverComponent	<LazyNeverAnalytics hydrate-never />	永远不 hydrate	SSR-only 展示，完全跳过客户端
 
 /* @__NO_SIDE_EFFECTS__ */
 export const createLazyVisibleComponent = defineLazyComponent({

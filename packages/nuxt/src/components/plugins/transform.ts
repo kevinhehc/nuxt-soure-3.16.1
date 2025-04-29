@@ -17,6 +17,7 @@ interface TransformPluginOptions {
   serverComponentRuntime: string
 }
 
+// 在 .vue 文件编译阶段，对组件代码进行静态分析和自动修改（transform），根据配置规则动态调整模板、脚本内容，从而支持各种优化（比如 lazy hydration、islands、组件自动命名等）。
 export function TransformPlugin (nuxt: Nuxt, options: TransformPluginOptions) {
   const componentUnimport = createUnimport({
     imports: [
