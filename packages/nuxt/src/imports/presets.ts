@@ -1,6 +1,17 @@
 import type { InlinePreset } from 'unimport'
 import { defineUnimportPreset } from 'unimport'
 
+// 定义了一系列默认的 Auto Imports Preset 列表。
+
+// 项目	说明
+// commonPresets	---- vue-demi (兼容 vue2/vue3 检测)
+// granularAppPresets	---- Nuxt 内建 Composables，比如 useNuxtApp, useState, useFetch, useError 等
+// scriptsStubsPreset	---- 用于注入各种脚本（analytics, tracking tools）相关的 stub API
+// routerPreset	---- 路由生命周期相关 hooks，比如 onBeforeRouteLeave
+// vuePreset	---- Vue 3 本身的全部 API 自动导入，比如 ref, computed, watch, h 等
+// vueTypesPreset	---- Vue 3 类型相关的导入，比如 Ref, Component, VNode 等
+// appCompatPresets	---- Nuxt 兼容层，比如兼容 requestIdleCallback
+
 const commonPresets: InlinePreset[] = [
   // vue-demi (mocked)
   defineUnimportPreset({
