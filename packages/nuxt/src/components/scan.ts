@@ -56,6 +56,18 @@ export async function scanComponents (dirs: ComponentsDir[], srcDir: string): Pr
     // A map from resolved path to component name (used for making duplicate warning message)
     const resolvedNames = new Map<string, string>()
 
+    // globby 是一个比 glob 更强的文件匹配工具，它默认支持递归子目录，按你给的 pattern 去匹配所有符合条件的文件。
+    // 而在 normalizeDirs() 那一层就设置好了默认的扫描 pattern：
+    // pattern: `**/*.{vue,ts,js}`
+    // 这里的 **/ 就代表 任意层级递归扫描，比如：
+    // components/
+    // ├─ Header.vue
+    // ├─ nested/
+    // │   ├─ Sidebar.vue
+    // │   └─ even-deeper/
+    // │       └─ Chart.vue
+    // 它们都会被找出来！
+
     const files = (await globby(dir.pattern!, { cwd: dir.path, ignore: dir.ignore })).sort()
 
     // Check if the directory exists (globby will otherwise read it case insensitively on MacOS)
