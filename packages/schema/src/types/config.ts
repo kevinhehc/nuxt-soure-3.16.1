@@ -100,6 +100,7 @@ export interface NuxtOptions extends Omit<ConfigSchema, 'vue' | 'sourcemap' | 'd
   // 3.【./custom-layer 的路径】
   //
   // 每个都作为一个 Layer 加入，形成一个合并的配置体系。
+  // 1
   _layers: NuxtConfigLayer[]
   $schema: SchemaDefinition
 }

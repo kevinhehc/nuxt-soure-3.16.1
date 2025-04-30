@@ -26,6 +26,7 @@ export async function build (nuxt: Nuxt) {
       // Unset mainComponent and errorComponent if app or error component is changed
       if (event === 'add' || event === 'unlink') {
         const path = resolve(nuxt.options.srcDir, relativePath)
+
         for (const layer of nuxt.options._layers) {
           const relativePath = relative(layer.config.srcDir || layer.cwd, path)
           if (relativePath.match(/^app\./i)) {

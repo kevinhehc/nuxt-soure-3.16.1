@@ -31,6 +31,7 @@ export interface LoadNuxtConfigOptions extends Omit<LoadConfigOptions<NuxtConfig
 export async function loadNuxtConfig (opts: LoadNuxtConfigOptions): Promise<NuxtOptions> {
   // Automatically detect and import layers from `~~/layers/` directory
   // 自动检测本地 layers/ 目录下的子文件夹，作为 Layer
+
   const localLayers = await globby('layers/*', { onlyDirectories: true, cwd: opts.cwd || process.cwd() })
   opts.overrides = defu(opts.overrides, { _extends: localLayers });
 
@@ -102,7 +103,7 @@ export async function loadNuxtConfig (opts: LoadNuxtConfigOptions): Promise<Nuxt
     }
     _layers.push(layer)
   }
-
+  // 1
   ;(nuxtConfig as any)._layers = _layers
 
   // Ensure at least one layer remains (without nuxt.config)
