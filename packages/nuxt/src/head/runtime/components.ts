@@ -125,7 +125,11 @@ const globalProps = {
 }
 
 // <noscript>
+// 代码定义了一个 Vue 组件 NoScript，它是 Nuxt 中 <noscript> 标签的组合式 <Head> 子组件实现，
+// 通过 @unhead/vue 注册 <noscript> 元素到 <head> 中。
 export const NoScript = defineComponent({
+  // inheritAttrs: false: 避免多余属性自动传给根元素（因为返回 null）；
+  // 支持一些通用属性（如 tagPosition, hid, key, title 等），用于控制 <noscript> 元素注入时机与属性。
   name: 'NoScript',
   inheritAttrs: false,
   props: {
@@ -134,13 +138,20 @@ export const NoScript = defineComponent({
     title: String,
   },
   setup (props, { slots }) {
+    // 调用 useHeadComponentCtx() 获取当前页面的 head 对象；
+    // 初始化 input.noscript 数组；
+    // 占位注册一个空对象 {}，记录其索引 idx。
     const { input } = useHeadComponentCtx()
     input.noscript ||= []
     const idx: keyof typeof input.noscript = input.noscript.push({}) - 1
+    // 组件卸载时，将其对应的 <noscript> 配置清除，避免内存泄露或重复渲染。
     onUnmounted(() => input.noscript![idx] = null)
     return () => {
       const noscript = normalizeProps(props) as Noscript
       const slotVnodes = slots.default?.()
+      // 如果组件有插槽内容，拼接成字符串作为 <noscript> 的 innerHTML；
+      //
+      // 类似写法：
       const textContent = slotVnodes
         ? slotVnodes.filter(({ children }) => children).map(({ children }) => children).join('')
         : ''
@@ -151,9 +162,41 @@ export const NoScript = defineComponent({
       return null
     }
   },
+  // 示例：注册 <noscript> 标签
+  // <script setup>
+  // </script>
+  // <template>
+  //   <NoScript>
+  //     <link rel="stylesheet" href="/fallback.css" />
+  //   </NoScript>
+  // </template>
+
+  // 生成结果：
+  // <noscript>
+  //   <link rel="stylesheet" href="/fallback.css" />
+  // </noscript>
 })
 
 // <link>
+// 示例
+// <script setup>
+// </script>
+//
+// <template>
+//   <!-- 普通样式表 -->
+//   <Link rel="stylesheet" href="/styles/global.css" />
+//
+//   <!-- 预加载字体 -->
+//   <Link rel="preload" href="/fonts/myfont.woff2" as="font" crossorigin="anonymous" />
+//
+//   <!-- 条件加载 -->
+//   <Link rel="stylesheet" href="/mobile.css" media="(max-width: 600px)" />
+// </template>
+
+// 渲染效果（在 <head> 中）
+// <link rel="stylesheet" href="/styles/global.css">
+// <link rel="preload" href="/fonts/myfont.woff2" as="font" crossorigin="anonymous">
+// <link rel="stylesheet" href="/mobile.css" media="(max-width: 600px)">
 export const Link = defineComponent({
   name: 'Link',
   inheritAttrs: false,

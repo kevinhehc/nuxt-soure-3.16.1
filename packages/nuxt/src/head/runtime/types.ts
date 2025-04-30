@@ -1,3 +1,4 @@
+//
 export type Props = Readonly<Record<string, any>>
 
 export type FetchPriority = 'high' | 'low' | 'auto'

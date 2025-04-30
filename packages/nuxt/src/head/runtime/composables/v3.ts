@@ -10,13 +10,20 @@ import {
 import { tryUseNuxtApp } from '#app/nuxt'
 import type { NuxtApp } from '#app/nuxt'
 
+// 在 Nuxt 中使用 <head> 标签的推荐方式，自动注入 head 实例并调用 @unhead/vue 提供的核心功能。
+
 /**
  * Injects the head client from the Nuxt context or Vue inject.
  *
  * In Nuxt v3 this function will not throw an error if the context is missing.
  */
+// 从 Nuxt 上下文中获取 head 实例（VueHeadClient）；
+// 如果未传入上下文，会尝试使用当前 NuxtApp 或 Vue 的依赖注入。
 export function injectHead (nuxtApp?: NuxtApp): VueHeadClient {
   // Nuxt 4 will throw an error if the context is missing
+  // SSR 时从 nuxt.ssrContext.head 中取；
+  // 客户端或插件中用 Vue inject() 获取；
+  // 不会抛错，找不到就返回 undefined（容错）。
   const nuxt = nuxtApp || tryUseNuxtApp()
   return nuxt?.ssrContext?.head || nuxt?.runWithContext(() => {
     if (hasInjectionContext()) {
@@ -29,6 +36,9 @@ interface NuxtUseHeadOptions extends UseHeadOptions {
   nuxt?: NuxtApp
 }
 
+// 注册一个 <head> 配置（如 title, meta, link 等）；
+// 可在组件、布局、插件等地方使用；
+// 自动注入 Nuxt 上下文中的 head 客户端对象。
 export function useHead (input: UseHeadInput, options: NuxtUseHeadOptions = {}): ActiveHeadEntry<UseHeadInput> | void {
   const head = injectHead(options.nuxt)
   if (head) {

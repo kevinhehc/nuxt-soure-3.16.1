@@ -13,6 +13,7 @@ import type { NuxtApp } from '#app/nuxt'
 /**
  * Injects the head client from the Nuxt context or Vue inject.
  */
+// 这些函数是 Nuxt 对 @unhead/vue 的封装，用于在组件、插件等地方注册 <head> 内容（如 <title>、<meta>、SEO 标签等），并支持 SSR 与 CSR 的统一管理。
 export function injectHead (nuxtApp?: NuxtApp): VueHeadClient {
   // Nuxt 4 will throw an error if the context is missing
   const nuxt = nuxtApp || useNuxtApp()

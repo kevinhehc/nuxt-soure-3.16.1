@@ -2,6 +2,8 @@ import type { UseHeadInput, UseHeadOptions, VueHeadClient } from '@unhead/vue'
 import { defineNuxtPlugin } from '#app/nuxt'
 import { useHead } from '#app/composables/head'
 
+// 为 @unhead/vue 提供 @vueuse/head 风格的 API 兼容层，避免第三方库（如 VueUse）在使用旧 API 时报错或失效。
+
 export type VueHeadClientPollyFill = VueHeadClient & {
   /**
    * @deprecated use `resolveTags`
@@ -36,6 +38,9 @@ export type VueHeadClientPollyFill = VueHeadClient & {
 /**
  * @deprecated Will be removed in Nuxt v4.
  */
+// 接收一个 VueHeadClient 实例（即 @unhead/vue 创建的 head 实例）；
+// 在其原型上动态添加兼容函数；
+// 返回带有“旧 API 名称”的增强版 head。
 function polyfillAsVueUseHead (head: VueHeadClient): VueHeadClientPollyFill {
   const polyfilled = head as VueHeadClientPollyFill
   // add a bunch of @vueuse/head compat functions
