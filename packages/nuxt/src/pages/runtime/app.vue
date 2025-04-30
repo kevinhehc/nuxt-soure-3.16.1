@@ -1,3 +1,4 @@
+<!-- 无逻辑 -->
 <template>
   <NuxtLayout>
     <NuxtPage />

@@ -1,3 +1,4 @@
+// 无方法
 declare module '#build/router.options' {
   import type { RouterOptions } from '@nuxt/schema'
 

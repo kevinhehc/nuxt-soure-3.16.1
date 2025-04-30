@@ -43,7 +43,75 @@ interface ScannedFile {
 }
 
 // 通过文件生成路由信息
+// 功能 ---	说明
+// 扫描 pages 目录	---	递归遍历所有 .vue 页面文件
+// 解析文件路径为路由路径	---	将 pages/index.vue 转换为 /，pages/blog/[slug].vue 转换为 /blog/:slug
+// 构建页面树结构	---	支持嵌套路由（children）、布局、meta 信息、name 等
+// 支持动态参数、可选参数、别名、命名路由等 Nuxt 特性 ---
+// 用于生成 app.pages、routes.mjs、typed-router 类型文件等 ---
 export async function resolvePagesRoutes (pattern: string | string[], nuxt = useNuxt()): Promise<NuxtPage[]> {
+  // 示例 1：基础页面结构
+  // 目录结构：
+  // pages/
+  //   index.vue
+  //   about.vue
+  //   blog/
+  //     index.vue
+  //     [slug].vue
+  // 执行：resolvePagesRoutes() → 返回结构：
+  // [
+  //   { path: '/', file: 'pages/index.vue' },
+  //   { path: '/about', file: 'pages/about.vue' },
+  //   {
+  //     path: '/blog',
+  //     file: 'pages/blog/index.vue',
+  //     children: [
+  //       { path: ':slug', file: 'pages/blog/[slug].vue' }
+  //     ]
+  //   }
+  // ]
+
+  // 示例 2：动态参数 + 可选参数 + catch-all
+  // 目录结构：
+  // pages/
+  //   user/
+  //     [id].vue
+  //     [id]/
+  //       settings.vue
+  //     [id].settings.vue
+  //     [...slug].vue
+  // 返回结构：
+  // [
+  //   { path: '/user/:id', file: 'pages/user/[id].vue' },
+  //   {
+  //     path: '/user/:id',
+  //     children: [
+  //       { path: 'settings', file: 'pages/user/[id]/settings.vue' }
+  //     ]
+  //   },
+  //   { path: '/user/:id.settings', file: 'pages/user/[id].settings.vue' },
+  //   { path: '/user/:slug(.*)', file: 'pages/user/[...slug].vue' }
+  // ]
+  // :slug(.*) 是 Vue Router 对 ** 或 ...slug 的解析方式（匹配任意路径）。
+
+  // 示例 3：命名页面、定义别名、设置 meta
+  // 如果你在页面中使用：
+  // <!-- pages/about.vue -->
+  // <script setup lang="ts">
+  // definePageMeta({
+  //   alias: ['/info'],
+  //   name: 'aboutPage',
+  //   layout: 'custom'
+  // })
+  // </script>
+  // resolvePagesRoutes() 结果包含：
+  // {
+  //   path: '/about',
+  //   file: 'pages/about.vue',
+  //   alias: ['/info'],
+  //   name: 'aboutPage',
+  //   meta: { layout: 'custom' }
+  // }
   const pagesDirs = nuxt.options._layers.map(
     layer => resolve(layer.config.srcDir, (layer.config.rootDir === nuxt.options.rootDir ? nuxt.options : layer.config).dir?.pages || 'pages'),
   )
@@ -93,6 +161,19 @@ type GenerateRoutesFromFilesOptions = {
 }
 
 const INDEX_PAGE_RE = /\/index$/
+// 输入：页面文件路径数组（通常由 glob 扫描得出）；
+// 输出：RouteRecordRaw[] 类型的路由配置数组（符合 Vue Router 的结构）；
+// 自动支持嵌套路由、动态参数（[id].vue）、可选参数（[id]?）、catch-all 路由（[...all].vue）等。
+
+// 路由生成规则概览
+// 文件名	路由 path	说明
+// index.vue	/	根路径
+// about.vue	/about	普通静态路径
+// [slug].vue	/:slug	动态参数
+// [id]?/profile.vue	/:id?/profile	可选参数
+// [...all].vue	/:all(.*)*	catch-all 匹配
+// blog/index.vue	/blog	嵌套目录
+// blog/[slug]/comments.vue	/blog/:slug/comments	多级动态嵌套
 export function generateRoutesFromFiles (files: ScannedFile[], options: GenerateRoutesFromFilesOptions = {}): NuxtPage[] {
   const routes: NuxtPage[] = []
 
