@@ -143,6 +143,7 @@ export async function resolvePagesRoutes (pattern: string | string[], nuxt = use
   }
   if (shouldAugment === 'after-resolve') {
     await nuxt.callHook('pages:extend', pages)
+    // 1
     await augmentPages(pages, nuxt.vfs, augmentCtx)
   } else {
     const augmentedPages = await augmentPages(pages, nuxt.vfs, augmentCtx)
@@ -255,6 +256,7 @@ interface AugmentPagesContext {
 // routes: 页面结构树（由 generateRoutesFromFiles() 生成的路由配置）；
 // vfs: 虚拟文件系统（测试环境或 vite dev 模式下用，不用读硬盘）；
 // ctx: 上下文信息，包括已处理文件、跳过文件等缓存；
+// 2
 export async function augmentPages (routes: NuxtPage[], vfs: Record<string, string>, ctx: AugmentPagesContext = {}) {
   ctx.augmentedPages ??= new Set()
   for (const route of routes) {
@@ -276,6 +278,7 @@ export async function augmentPages (routes: NuxtPage[], vfs: Record<string, stri
       //     prerender: true
       //   }
       // }
+      // 3
       const routeMeta = await getRouteMeta(fileContent, route.file, ctx.extraExtractionKeys)
       // 合并已有 meta（比如配置中已有的）
       if (route.meta) {
