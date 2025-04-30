@@ -102,6 +102,7 @@ const plugin: Plugin<{ router: Router }> = defineNuxtPlugin({
 
     // _routes 是 Nuxt 自动扫描 pages/ 生成的路由结构。
     // 若用户提供 routerOptions.routes(...) 自定义处理，则使用它。
+    // 用【route option】还是 pages解析出来的【_routes】，在这里判断
     const routes = routerOptions.routes ? await routerOptions.routes(_routes) ?? _routes : _routes
 
     let startPosition: Parameters<RouterScrollBehavior>[2] | null

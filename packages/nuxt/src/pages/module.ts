@@ -407,6 +407,7 @@ export default defineNuxtModule({
     // 如果已手动设置 app.pages，不会重复扫描；
     // 使用 resolvePagesRoutes() 根据 pages/ 目录生成页面树。
     nuxt.hooks.hookOnce('app:templates', async (app) => {
+      // pages 解析的地方
       app.pages ||= await resolvePagesRoutes(options.pattern, nuxt)
     })
 
@@ -749,6 +750,7 @@ export default defineNuxtModule({
     addTemplate({
       filename: 'routes.mjs',
       getContents ({ app }) {
+        // pages 文件保存的地方
         if (!app.pages) { return ROUTES_HMR_CODE + 'export default []' }
         const { routes, imports } = normalizeRoutes(app.pages, new Set(), {
           serverComponentRuntime,
@@ -771,6 +773,7 @@ export default defineNuxtModule({
 
     // Add router options template
     // 类型定义模板输出
+    // ap.option.route 生成的地方
     addTemplate({
       filename: 'router.options.mjs',
       getContents: async ({ nuxt }) => {
