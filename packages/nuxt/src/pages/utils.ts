@@ -248,30 +248,59 @@ interface AugmentPagesContext {
   extraExtractionKeys?: string[]
 }
 
+// 中用于 增强页面路由信息（meta 数据） 的关键工具函数，广泛应用于：
+// 自动提取 definePageMeta() 或 defineRouteRules() 的内容；
+// 注入到每个页面的 route.meta 字段；
+// 用于构建 typed router、路由规则合并、预渲染规则、页面 transition、layout、middleware 等功能。
+// routes: 页面结构树（由 generateRoutesFromFiles() 生成的路由配置）；
+// vfs: 虚拟文件系统（测试环境或 vite dev 模式下用，不用读硬盘）；
+// ctx: 上下文信息，包括已处理文件、跳过文件等缓存；
 export async function augmentPages (routes: NuxtPage[], vfs: Record<string, string>, ctx: AugmentPagesContext = {}) {
   ctx.augmentedPages ??= new Set()
   for (const route of routes) {
     if (route.file && !ctx.pagesToSkip?.has(route.file)) {
+      // 优先从 vfs 虚拟文件系统读取；
+      // 否则通过 resolvePath() 加载硬盘上 .vue 文件内容。
       const fileContent = route.file in vfs
         ? vfs[route.file]!
         : fs.readFileSync(ctx.fullyResolvedPaths?.has(route.file) ? route.file : await resolvePath(route.file), 'utf-8')
+      // 通过静态分析源码（使用 Babel/AST）提取：
+      // definePageMeta({ layout, middleware, keepalive, transition })
+      // defineRouteRules({ prerender, headers })
+      // 自定义扩展 meta key
+      // 返回结构类似：
+      // {
+      //   meta: {
+      //     layout: 'admin',
+      //     middleware: ['auth'],
+      //     prerender: true
+      //   }
+      // }
       const routeMeta = await getRouteMeta(fileContent, route.file, ctx.extraExtractionKeys)
+      // 合并已有 meta（比如配置中已有的）
       if (route.meta) {
         routeMeta.meta = { ...routeMeta.meta, ...route.meta }
       }
 
+      // 直接在路由对象上追加/更新 meta 字段；
+      // 记录该页面已经被处理，避免重复提取。
       Object.assign(route, routeMeta)
       ctx.augmentedPages.add(route.file)
     }
 
+    // 递归子页面
     if (route.children && route.children.length > 0) {
       await augmentPages(route.children, vfs, ctx)
     }
   }
+  // 返回一个 Set<string>，表示哪些页面文件已被增强处理过。
   return ctx.augmentedPages
 }
 
+// 用于匹配 .vue 文件中所有 <script> 标签的正则，含两个命名捕获组：
 const SFC_SCRIPT_RE = /<script(?<attrs>[^>]*)>(?<content>[\s\S]*?)<\/script[^>]*>/gi
+// 参数 sfc：.vue 文件的完整内容（字符串）
+// 返回值：一个数组，数组中的每一项是提取出的 <script> 代码段，包括其 loader 类型（用于后续 AST 解析或转译）。
 export function extractScriptContent (sfc: string) {
   const contents: Array<{ loader: 'tsx' | 'ts', code: string }> = []
   for (const match of sfc.matchAll(SFC_SCRIPT_RE)) {
@@ -292,8 +321,10 @@ const DYNAMIC_META_KEY = '__nuxt_dynamic_meta_key' as const
 
 const pageContentsCache: Record<string, string> = {}
 const metaCache: Record<string, Partial<Record<keyof NuxtPage, any>>> = {}
+// 负责从 .vue 页面文件中提取 definePageMeta() 宏中定义的静态内容（如 name、path、alias、middleware 等），并将这些信息注入到 NuxtPage 的 meta 字段中。
 export function getRouteMeta (contents: string, absolutePath: string, extraExtractionKeys: string[] = []): Partial<Record<keyof NuxtPage, any>> {
   // set/update pageContentsCache, invalidate metaCache on cache mismatch
+  // 如果源码变更，清空之前的缓存，避免重复提取或过时数据。
   if (!(absolutePath in pageContentsCache) || pageContentsCache[absolutePath] !== contents) {
     pageContentsCache[absolutePath] = contents
     delete metaCache[absolutePath]
@@ -304,6 +335,9 @@ export function getRouteMeta (contents: string, absolutePath: string, extraExtra
   }
 
   const loader = getLoader(absolutePath)
+  // 如果是 .vue 文件，则提取 <script> 块；
+  // 否则直接拿整段代码（如 .ts 文件）；
+  // 这是为了后续用 AST 解析 definePageMeta(...) 调用。
   const scriptBlocks = !loader ? null : loader === 'vue' ? extractScriptContent(contents) : [{ code: contents, loader }]
   if (!scriptBlocks) {
     metaCache[absolutePath] = {}
@@ -312,6 +346,12 @@ export function getRouteMeta (contents: string, absolutePath: string, extraExtra
 
   const extractedMeta: Partial<Record<keyof NuxtPage, any>> = {}
 
+  // 默认提取字段包括：
+  // name
+  // path
+  // props
+  // alias
+  // redirect
   const extractionKeys = new Set<keyof NuxtPage>([...defaultExtractionKeys, ...extraExtractionKeys as Array<keyof NuxtPage>])
 
   for (const script of scriptBlocks) {
@@ -326,6 +366,9 @@ export function getRouteMeta (contents: string, absolutePath: string, extraExtra
     parseAndWalk(script.code, absolutePath.replace(/\.\w+$/, '.' + script.loader), (node) => {
       if (foundMeta) { return }
 
+      // 找到宏函数；
+      // 要求参数是 ObjectExpression（字面对象）；
+      // 否则提示开发者函数调用不合法。
       if (node.type !== 'ExpressionStatement' || node.expression.type !== 'CallExpression' || node.expression.callee.type !== 'Identifier' || node.expression.callee.name !== 'definePageMeta') { return }
 
       foundMeta = true
@@ -709,20 +752,47 @@ async function createClientPage(loader) {
   }
 }
 
+// 匹配以 / 开头、包含 : 动态参数的路径片段，比如 /blog/:slug。
 const PATH_TO_NITRO_GLOB_RE = /\/[^:/]*:\w.*$/
+
+
 export function pathToNitroGlob (path: string) {
   if (!path) {
     return null
   }
   // Ignore pages with multiple dynamic parameters.
+  // // 忽略有多个动态参数的路径（不处理）
   if (path.indexOf(':') !== path.lastIndexOf(':')) {
     return null
   }
 
   return path.replace(PATH_TO_NITRO_GLOB_RE, '/**')
+  // 原始路径	--- 结果
+  // /blog/:slug	--- /blog/**
+  // /product/:id/review/:comment	--- null （因为有多个动态参数）
+  // /about	--- null （无 :）
 }
 
+// 递归解析所有页面及子页面的完整路径列表
 export function resolveRoutePaths (page: NuxtPage, parent = '/'): string[] {
+  // 示例：
+  // 假设页面结构为：
+  // {
+  //   path: 'blog',
+  //   children: [
+  //     { path: '', file: 'blog/index.vue' },
+  //     { path: '[slug]', file: 'blog/[slug].vue' }
+  //   ]
+  // }
+  // 调用：
+  // resolveRoutePaths(blogPage)
+  // 返回：
+  // [
+  //   '/blog',
+  //   '/blog',
+  //   '/blog/:slug'
+  // ]
+  // （注意：[slug] 页面转成 :slug 是由其他逻辑处理的，这里只拼路径）
   return [
     joinURL(parent, page.path),
     ...page.children?.flatMap(child => resolveRoutePaths(child, joinURL(parent, page.path))) || [],
